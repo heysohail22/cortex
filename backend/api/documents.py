@@ -122,10 +122,14 @@ async def upload_document(
 
 @router.get("/documents", response_model=DocumentListResponse)
 async def list_documents(session_id: str):
-    items = await asyncio.to_thread(vs.list_documents_info, session_id)
-    doc_names = [item["filename"] for item in items]
-    doc_items = [DocumentItem(filename=item["filename"], chunks=item["chunks"]) for item in items]
-    return DocumentListResponse(session_id=session_id, documents=doc_names, items=doc_items)
+    try:
+        items = await asyncio.to_thread(vs.list_documents_info, session_id)
+        doc_names = [item["filename"] for item in items]
+        doc_items = [DocumentItem(filename=item["filename"], chunks=item["chunks"]) for item in items]
+        return DocumentListResponse(session_id=session_id, documents=doc_names, items=doc_items)
+    except Exception as e:
+        logger.warning("Failed to retrieve documents for session '%s': %s", session_id, e)
+        return DocumentListResponse(session_id=session_id, documents=[], items=[])
 
 
 @router.get("/documents/{filename}/url", response_model=DocumentUrlResponse)

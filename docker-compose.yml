@@ -23,7 +23,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: https://cortex-ai.duckdns.org
+        NEXT_PUBLIC_API_URL: http://localhost:8001
     container_name: cortex-frontend
     restart: unless-stopped
     ports:
@@ -31,7 +31,7 @@ services:
     environment:
       - PORT=3000
       - HOSTNAME=0.0.0.0
-      - NEXT_PUBLIC_API_URL=https://cortex-ai.duckdns.org
+      - NEXT_PUBLIC_API_URL=http://localhost:8001
     depends_on:
       backend:
         condition: service_healthy

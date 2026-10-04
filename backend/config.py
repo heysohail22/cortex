@@ -1,7 +1,12 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+_env_file = Path(__file__).resolve().parent / ".env"
+if _env_file.exists():
+    load_dotenv(_env_file)
+else:
+    load_dotenv()
 
 # Groq LLMs (Sole LLM Provider for reasoning, generation, routing, and judging)
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")

@@ -1,12 +1,15 @@
 import os
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi.responses import JSONResponse
+import logging
 
 from api.chat import router as chat_router
 from api.documents import router as documents_router
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Cortex API",
@@ -18,10 +21,8 @@ app = FastAPI(
 origins = [
     "http://localhost:3000",
     "http://localhost:3001",
-    "http://3.25.64.38:3001",
-    "https://cortex-ai.duckdns.org",
-    "http://cortex-ai.duckdns.org",
     "https://cortex-lime-zeta.vercel.app",
+    "https://cortex-azure-six.vercel.app",
 ]
 
 # Allow custom frontend URL from env if configured
@@ -37,6 +38,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled error for %s %s: %s", request.method, request.url.path, exc)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An internal server error occurred.", "error": str(exc)},
+    )
+
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(chat_router)
