@@ -179,15 +179,24 @@ async def chat(request: ChatRequest):
 @router.delete("/sessions/{session_id}", response_model=DeleteSessionResponse)
 async def delete_session(session_id: str):
     """Delete all conversation history, document chunks, and storage files associated with a session."""
+    # Attempt cleanup on each component independently so offline/sleeping DB doesn't crash the deletion
     try:
         await asyncio.to_thread(delete_conversation, session_id)
-        await asyncio.to_thread(vs.delete_session_documents, session_id)
-        await asyncio.to_thread(storage_service.delete_session_files, session_id)
-        return DeleteSessionResponse(
-            status="success",
-            message=f"Session '{session_id}' deleted successfully",
-        )
     except Exception as e:
-        logger.exception("Failed to delete session %s", session_id)
-        raise HTTPException(status_code=500, detail=f"Failed to delete session: {e}")
+        logger.warning("Could not delete conversation for session %s (database may be sleeping): %s", session_id, e)
+
+    try:
+        await asyncio.to_thread(vs.delete_session_documents, session_id)
+    except Exception as e:
+        logger.warning("Could not delete document chunks for session %s: %s", session_id, e)
+
+    try:
+        await asyncio.to_thread(storage_service.delete_session_files, session_id)
+    except Exception as e:
+        logger.warning("Could not delete storage files for session %s: %s", session_id, e)
+
+    return DeleteSessionResponse(
+        status="success",
+        message=f"Session '{session_id}' deleted successfully",
+    )
 
