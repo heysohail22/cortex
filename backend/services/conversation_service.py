@@ -49,59 +49,67 @@ def _format_messages(messages: List[ChatMessage]) -> str:
     return "\n".join(lines)
 
 
-def save_message(session_id: str, role: str, content: str) -> None:
-    """Persist a user or assistant message to Supabase."""
+CHAT_HISTORY_TABLE = "chat_history"
+
+
+def save_turn(session_id: str, user_message: str, assistant_message: str) -> None:
+    """Persist a dialogue turn (user question + assistant response) to chat_history in Supabase."""
     try:
         client = _get_client()
-        client.table("conversations").insert(
+        client.table(CHAT_HISTORY_TABLE).insert(
             {
                 "session_id": session_id,
-                "role": role,
-                "content": content,
+                "user_message": user_message,
+                "assistant_message": assistant_message,
             }
         ).execute()
     except Exception as e:
-        logger.warning("Failed to save conversation message for %s: %s", session_id, e)
+        logger.warning("Failed to save chat history turn for %s: %s", session_id, e)
 
 
 def get_messages(session_id: str) -> List[ChatMessage]:
-    """Fetch all messages for a session, ordered by time."""
+    """Fetch all messages for a session from chat_history, ordered by time."""
     try:
         client = _get_client()
         response = (
-            client.table("conversations")
-            .select("role,content,created_at")
+            client.table(CHAT_HISTORY_TABLE)
+            .select("user_message,assistant_message,created_at")
             .eq("session_id", session_id)
             .order("created_at")
             .execute()
         )
-        return [
-            ChatMessage(role=row["role"], content=row["content"])
-            for row in (response.data or [])
-        ]
+        messages: List[ChatMessage] = []
+        for row in (response.data or []):
+            u_msg = row.get("user_message")
+            a_msg = row.get("assistant_message")
+            if u_msg:
+                messages.append(ChatMessage(role="user", content=u_msg))
+            if a_msg:
+                messages.append(ChatMessage(role="assistant", content=a_msg))
+        return messages
     except Exception as e:
-        logger.warning("Failed to fetch conversation for %s: %s", session_id, e)
+        logger.warning("Failed to fetch chat history for %s: %s", session_id, e)
         return []
 
 
 def delete_conversation(session_id: str) -> None:
-    """Delete all conversation messages for a session from Supabase."""
+    """Delete all chat history turns for a session from Supabase."""
     try:
         client = _get_client()
-        client.table("conversations").delete().eq("session_id", session_id).execute()
-        logger.info("Deleted conversation messages for session %s", session_id)
+        client.table(CHAT_HISTORY_TABLE).delete().eq("session_id", session_id).execute()
+        logger.info("Deleted chat history for session %s", session_id)
     except Exception as e:
-        logger.warning("Failed to delete conversation messages for %s: %s", session_id, e)
+        logger.warning("Failed to delete chat history for %s: %s", session_id, e)
         raise
 
 
 def get_all_sessions_summary() -> list[dict]:
-    """Fetch all unique conversation sessions from Supabase with their title, messages, and created_at."""
+    """Fetch all unique conversation sessions from chat_history with their user & assistant messages."""
     try:
         client = _get_client()
         response = (
-            client.table("conversations")
-            .select("session_id,role,content,created_at")
+            client.table(CHAT_HISTORY_TABLE)
+            .select("session_id,user_message,assistant_message,created_at")
             .order("created_at")
             .execute()
         )
@@ -115,19 +123,30 @@ def get_all_sessions_summary() -> list[dict]:
             sessions_dict[sid].append(row)
 
         summary_list = []
-        for sid, msgs in sessions_dict.items():
-            first_user_msg = next((m["content"] for m in msgs if m.get("role") == "user"), msgs[0]["content"])
+        for sid, turns in sessions_dict.items():
+            first_user_msg = turns[0].get("user_message", "")
             title = first_user_msg[:45].strip() if first_user_msg else "New Chat"
-            last_created = msgs[-1].get("created_at") or msgs[0].get("created_at")
+            last_created = turns[-1].get("created_at") or turns[0].get("created_at")
 
             formatted_msgs = []
-            for i, m in enumerate(msgs):
-                formatted_msgs.append({
-                    "id": f"{sid}-{i}",
-                    "role": m.get("role", "user"),
-                    "content": m.get("content", ""),
-                    "timestamp": m.get("created_at", ""),
-                })
+            for i, t in enumerate(turns):
+                u_text = t.get("user_message", "")
+                a_text = t.get("assistant_message", "")
+                t_stamp = t.get("created_at", "")
+                if u_text:
+                    formatted_msgs.append({
+                        "id": f"{sid}-u-{i}",
+                        "role": "user",
+                        "content": u_text,
+                        "timestamp": t_stamp,
+                    })
+                if a_text:
+                    formatted_msgs.append({
+                        "id": f"{sid}-a-{i}",
+                        "role": "assistant",
+                        "content": a_text,
+                        "timestamp": t_stamp,
+                    })
 
             summary_list.append({
                 "id": sid,
@@ -140,7 +159,7 @@ def get_all_sessions_summary() -> list[dict]:
         summary_list.sort(key=lambda s: s.get("created_at") or "", reverse=True)
         return summary_list
     except Exception as e:
-        logger.warning("Failed to fetch sessions summary from Supabase: %s", e)
+        logger.warning("Failed to fetch sessions summary from chat_history: %s", e)
         return []
 
 

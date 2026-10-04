@@ -20,7 +20,7 @@ from services.conversation_service import (
     get_all_sessions_summary,
     get_conversation_context,
     get_native_conversation_turns,
-    save_message,
+    save_turn,
 )
 
 logger = logging.getLogger(__name__)
@@ -127,10 +127,9 @@ async def chat(request: ChatRequest):
             valid_web_urls=result.get("valid_web_urls", set()),
         )
 
-        # Persist this turn so future questions have context.
+        # Persist this turn to chat_history so future questions have context.
         # We save the redacted query (not raw) to avoid storing PII in Supabase.
-        save_message(request.session_id, "user", processed_query)
-        save_message(request.session_id, "assistant", clean_answer)
+        save_turn(request.session_id, user_message=processed_query, assistant_message=clean_answer)
 
         raw_chunks = result.get("chunks", [])
         clean_chunks = [
