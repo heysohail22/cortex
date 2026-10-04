@@ -17,6 +17,7 @@ from guardrails import (
 from rag import storage_service, vector_store as vs
 from services.conversation_service import (
     delete_conversation,
+    get_all_sessions_summary,
     get_conversation_context,
     get_native_conversation_turns,
     save_message,
@@ -174,6 +175,17 @@ async def chat(request: ChatRequest):
     except Exception as e:
         logger.exception("Chat error for session %s", request.session_id)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/sessions")
+async def list_sessions():
+    """List all saved chat sessions and their messages from Supabase."""
+    try:
+        sessions = await asyncio.to_thread(get_all_sessions_summary)
+        return {"sessions": sessions}
+    except Exception as e:
+        logger.warning("Could not fetch sessions from Supabase: %s", e)
+        return {"sessions": []}
 
 
 @router.delete("/sessions/{session_id}", response_model=DeleteSessionResponse)

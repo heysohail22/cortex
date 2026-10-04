@@ -95,6 +95,55 @@ def delete_conversation(session_id: str) -> None:
         raise
 
 
+def get_all_sessions_summary() -> list[dict]:
+    """Fetch all unique conversation sessions from Supabase with their title, messages, and created_at."""
+    try:
+        client = _get_client()
+        response = (
+            client.table("conversations")
+            .select("session_id,role,content,created_at")
+            .order("created_at")
+            .execute()
+        )
+        sessions_dict: dict[str, list[dict]] = {}
+        for row in (response.data or []):
+            sid = row.get("session_id")
+            if not sid:
+                continue
+            if sid not in sessions_dict:
+                sessions_dict[sid] = []
+            sessions_dict[sid].append(row)
+
+        summary_list = []
+        for sid, msgs in sessions_dict.items():
+            first_user_msg = next((m["content"] for m in msgs if m.get("role") == "user"), msgs[0]["content"])
+            title = first_user_msg[:45].strip() if first_user_msg else "New Chat"
+            last_created = msgs[-1].get("created_at") or msgs[0].get("created_at")
+
+            formatted_msgs = []
+            for i, m in enumerate(msgs):
+                formatted_msgs.append({
+                    "id": f"{sid}-{i}",
+                    "role": m.get("role", "user"),
+                    "content": m.get("content", ""),
+                    "timestamp": m.get("created_at", ""),
+                })
+
+            summary_list.append({
+                "id": sid,
+                "title": title,
+                "messages": formatted_msgs,
+                "created_at": last_created,
+            })
+
+        # Sort newest session first
+        summary_list.sort(key=lambda s: s.get("created_at") or "", reverse=True)
+        return summary_list
+    except Exception as e:
+        logger.warning("Failed to fetch sessions summary from Supabase: %s", e)
+        return []
+
+
 async def _summarize_messages(messages: List[ChatMessage]) -> str:
     """Ask a fast LLM to compress older messages into a concise summary."""
     text = _format_messages(messages)

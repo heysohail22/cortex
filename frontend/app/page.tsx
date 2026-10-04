@@ -185,6 +185,66 @@ export default function Home() {
       });
   }, [userId]);
 
+  // Sync saved chat sessions from Supabase
+  useEffect(() => {
+    fetch(`${API_URL}/api/sessions`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.sessions) && data.sessions.length > 0) {
+          setSessions((prev) => {
+            const backendSessions: ChatSession[] = data.sessions.map(
+              (bs: {
+                id: string;
+                title: string;
+                messages: Array<{ id: string; role: string; content: string; timestamp?: string }>;
+                created_at: string;
+              }) => {
+                const parsedTime = bs.created_at ? new Date(bs.created_at).getTime() : Date.now();
+                return {
+                  id: bs.id,
+                  title: bs.title || "Chat",
+                  messages: (bs.messages || []).map((m) => ({
+                    id: m.id || generateSafeId(),
+                    role: m.role as "user" | "assistant",
+                    content: m.content || "",
+                    timestamp: m.timestamp
+                      ? new Date(m.timestamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+                      : undefined,
+                  })),
+                  createdAt: isNaN(parsedTime) ? Date.now() : parsedTime,
+                };
+              }
+            );
+
+            const merged = [...prev];
+            for (const bs of backendSessions) {
+              const idx = merged.findIndex((s) => s.id === bs.id);
+              if (idx === -1) {
+                merged.push(bs);
+              } else if (merged[idx].messages.length === 0 && bs.messages.length > 0) {
+                merged[idx] = {
+                  ...merged[idx],
+                  title: bs.title,
+                  messages: bs.messages,
+                };
+              }
+            }
+
+            merged.sort((a, b) => b.createdAt - a.createdAt);
+            saveSessionsToStorage(merged);
+
+            if (!activeChatIdRef.current && merged.length > 0) {
+              setActiveChatId(merged[0].id);
+            }
+            return merged;
+          });
+        }
+      })
+      .catch(() => {
+        // Fallback to local storage if backend is unavailable
+      });
+  }, []);
+
   // Active session and messages
   const activeSession = useMemo(
     () => sessions.find((s) => s.id === activeChatId),
