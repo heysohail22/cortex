@@ -14,6 +14,7 @@ from services import (
     classify_async,
     evaluate_groundedness_async,
     evaluate_retrieval_async,
+    generate_direct_answer_async,
     generate_hybrid_answer_async,
     generate_rag_answer_async,
     generate_web_answer_async,
@@ -42,6 +43,21 @@ async def router_node(state: CRAGState) -> CRAGState:
 
     is_unsafe = route == "unsafe"
     is_direct = route == "direct_answer"
+
+    if is_direct and not direct_answer:
+        conversation_history = state.get("conversation_history", "")
+        try:
+            direct_res = await asyncio.wait_for(
+                generate_direct_answer_async(
+                    question=question,
+                    conversation_history=conversation_history,
+                ),
+                timeout=config.TIMEOUT_GENERATION,
+            )
+            direct_answer = direct_res.get("answer", "")
+        except Exception as e:
+            logger.warning("Direct answer generation failed: %s", e)
+            direct_answer = "I am Cortex, an AI assistant. How can I help you today?"
 
     answer = direct_answer if (is_unsafe or is_direct) else state.get("answer", "")
     source = "guardrail" if is_unsafe else ("llm" if is_direct else state.get("source", ""))
