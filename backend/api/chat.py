@@ -98,6 +98,17 @@ async def _chat_impl(request: ChatRequest):
             valid_web_urls=result.get("valid_web_urls", set()),
         )
 
+        # Never keep approval for text or references changed after verification.
+        if result.get("verification_status") == "SUPPORTED" and (
+            clean_answer != result.get("answer", "") or clean_citations != result.get("citations", [])
+        ):
+            clean_answer, clean_citations = process_output(
+                "I could not complete answer verification right now. Please try again shortly.", [],
+            )
+            result.update(verification_status="UNKNOWN", is_grounded=None, nli_score=None,
+                          nli_verdict="NOT_CHECKED", source="guardrail", route="answer_unavailable",
+                          groundedness_reason="Output changed after verification.")
+
         # Persist this turn to chat_history so future questions have context.
         # We save the redacted query (not raw) to avoid storing PII in Supabase.
         save_turn(request.session_id, user_message=processed_query, assistant_message=clean_answer)
@@ -137,6 +148,9 @@ async def _chat_impl(request: ChatRequest):
             retrieval_corrections_used=result.get("retrieval_corrections_used", 0),
             evaluation_result=result.get("evaluation_result") or None,
             evaluation_reason=result.get("evaluation_reason") or None,
+            verification_status=result.get("verification_status", "SKIPPED"),
+            generation_status=result.get("generation_status"),
+            answer_repairs_used=result.get("answer_repairs_used", 0),
             is_grounded=result.get("is_grounded"),
             groundedness_reason=result.get("groundedness_reason") or None,
             transformed_query=result.get("transformed_query") or None,

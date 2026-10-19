@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 import os
 import sys
 import unittest
@@ -81,15 +82,15 @@ class TestCRAGRouteAndLoopBounds(unittest.TestCase):
 
     def test_hard_loop_bounds_groundedness(self):
         # Grounded (Entailment >= 0.85) -> END
-        state_grounded = _create_test_state(is_grounded=True, groundedness_retry_count=0)
+        state_grounded = _create_test_state(verification_status="SUPPORTED", answer_repairs_used=0)
         self.assertEqual(decide_after_groundedness(state_grounded), "END")
 
         # 1st hallucination (retry_count = 0) -> Route to Strict Constrained Generator
-        state_ungrounded_1 = _create_test_state(is_grounded=False, groundedness_retry_count=0)
+        state_ungrounded_1 = _create_test_state(verification_status="UNSUPPORTED", answer_repairs_used=0, answer_deadline=time.monotonic()+10)
         self.assertEqual(decide_after_groundedness(state_ungrounded_1), "strict_retry_node")
 
         # 2nd hallucination (retry_count >= 1) -> Bound enforced, forward to Safe Fallback
-        state_ungrounded_2 = _create_test_state(is_grounded=False, groundedness_retry_count=1)
+        state_ungrounded_2 = _create_test_state(verification_status="UNSUPPORTED", answer_repairs_used=1, answer_deadline=time.monotonic()+10)
         self.assertEqual(decide_after_groundedness(state_ungrounded_2), "safe_fallback_node")
 
 
@@ -106,7 +107,7 @@ class TestNodeTimeoutsAndFallbacks(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(res["route"], "unsafe")
         self.assertEqual(res["source"], "guardrail")
         self.assertIn("exploit creation", res["answer"])
-        self.assertFalse(res["is_grounded"])
+        self.assertIsNone(res["is_grounded"])
 
     @patch("workflows.crag.nodes.retrieval.vs.similarity_search")
     async def test_retrieve_node_timeout_fallback(self, mock_search):
@@ -139,7 +140,7 @@ class TestNodeTimeoutsAndFallbacks(unittest.IsolatedAsyncioTestCase):
             res = await web_search_node(state)
             self.assertEqual(res["web_results"], [])
 
-    @patch("workflows.crag.nodes.verification.evaluate_groundedness_async")
+    @patch("workflows.crag.nodes.verification.verify_answer_async")
     async def test_groundedness_node_timeout_fallback(self, mock_eval):
         async def _slow_eval(*args, **kwargs):
             await asyncio.sleep(4.0)
@@ -151,24 +152,26 @@ class TestNodeTimeoutsAndFallbacks(unittest.IsolatedAsyncioTestCase):
             answer="a",
             source="rag",
             chunks=[{"text": "doc content"}],
-            is_grounded=False,
+            is_grounded=None,
+            generation_result={"status": "SUCCESS", "source": "rag", "answer": "a"},
+            answer_deadline=time.monotonic()+10,
         )
 
         with patch("config.TIMEOUT_GROUNDEDNESS", 0.1):
             res = await groundedness_check_node(state)
-            # On timeout, defaults to True to avoid hanging the user
-            self.assertTrue(res["is_grounded"])
-            self.assertEqual(res["groundedness_reason"], "judge_timeout_fallback")
+            self.assertIsNone(res["is_grounded"])
+            self.assertEqual(res["verification_status"], "UNKNOWN")
+            self.assertEqual(res["answer"], "")
 
 
     async def test_safe_fallback_node(self):
         from workflows.crag.nodes import safe_fallback_node
-        state = _create_test_state(question="test", groundedness_retry_count=1)
+        state = _create_test_state(question="test", answer_repairs_used=1, verification_status="UNSUPPORTED")
         res = await safe_fallback_node(state)
         self.assertEqual(res["source"], "guardrail")
         self.assertEqual(res["route"], "hallucination_fallback")
-        self.assertTrue(res["is_grounded"])
-        self.assertIn("could not find verifiable facts", res["answer"])
+        self.assertFalse(res["is_grounded"])
+        self.assertIn("could not verify", res["answer"])
 
 
 if __name__ == "__main__":

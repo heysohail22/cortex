@@ -6,6 +6,7 @@ python-multipart>=0.0.20
 # LLM & Agent Framework
 langchain>=0.3.0
 langchain-groq>=0.3.0
+groq>=0.37.1
 langchain-community>=0.3.0
 langgraph>=0.2.0
 
@@ -13,7 +14,7 @@ langgraph>=0.2.0
 supabase>=2.0.0
 
 # Cloud Embeddings (Google Gemini)
-google-genai>=1.0.0
+google-genai>=2.7.0
 langchain-google-genai>=4.2.5
 
 # Web Search

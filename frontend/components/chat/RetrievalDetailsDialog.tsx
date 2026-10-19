@@ -1,5 +1,7 @@
 "use client";
 
+import { verificationLabel, type VerificationStatus } from "@/lib/verification";
+
 import React from "react";
 import {
   Dialog,
@@ -35,7 +37,8 @@ interface RetrievalDetailsDialogProps {
   webResults?: WebResultItem[];
   evaluationResult?: string;
   evaluationReason?: string;
-  isGrounded?: boolean;
+  isGrounded?: boolean | null;
+  verificationStatus?: VerificationStatus;
   groundednessReason?: string;
   route?: string;
   transformedQuery?: string;
@@ -50,7 +53,7 @@ export function RetrievalDetailsDialog({
   chunks = [],
   webResults = [],
   evaluationResult,
-  isGrounded,
+  verificationStatus,
   transformedQuery,
 }: RetrievalDetailsDialogProps) {
   const isRag = source === "rag" || source === "hybrid";
@@ -158,16 +161,16 @@ export function RetrievalDetailsDialog({
                     Retrieval Evaluator:
                   </span>
                   <span className="text-emerald-400 font-medium font-mono text-[11px]">
-                    {evaluationResult || "CORRECT (High Relevance)"}
+                    {evaluationResult || "Not assessed"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-zinc-300">
                   <span className="flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <ShieldCheck className={`w-3.5 h-3.5 ${verificationStatus === "SUPPORTED" ? "text-emerald-400" : "text-zinc-400"}`} />
                     Groundedness Judge:
                   </span>
-                  <span className="text-emerald-400 font-medium font-mono text-[11px]">
-                    {isGrounded !== false ? "100% Grounded" : "Ungrounded Fallback"}
+                  <span className={`font-medium font-mono text-[11px] ${verificationStatus === "SUPPORTED" ? "text-emerald-400" : "text-zinc-400"}`}>
+                    {verificationLabel(verificationStatus)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-zinc-300">
@@ -195,7 +198,7 @@ export function RetrievalDetailsDialog({
                 </div>
                 <div className="flex justify-between items-center text-zinc-300">
                   <span className="flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <ShieldCheck className={`w-3.5 h-3.5 ${verificationStatus === "SUPPORTED" ? "text-emerald-400" : "text-zinc-400"}`} />
                     Context Mode:
                   </span>
                   <span className="text-zinc-300 font-mono text-[11px]">

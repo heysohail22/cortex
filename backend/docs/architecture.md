@@ -25,7 +25,7 @@ Avoid importing all services from `services/__init__.py`: import the owning modu
 
 Conversation persistence is in `repositories/conversations.py`; budgeting and summarization are in `services/conversations.py`. Parsing and structural topic extraction live in `retrieval/ingestion/parsing.py`, safety-aware chunk preparation in `chunking.py`, and persistence orchestration in `indexing.py`.
 
-The refactor preserves model choices, temperatures, thresholds, API shapes, search scopes and retry behavior. It does not add authentication or change the database schema. Known verification limitations described in the Jev guides remain separate work.
+The refactor preserves model choices, temperatures, thresholds, API shapes, search scopes and retry behavior. It does not add authentication or change the database schema. Answer generation now uses typed contracts in `services/answer_contracts.py`, with an exact evidence snapshot and one shared repair allowance. See [generation and verification](generation_verification.md) for the status and failure policy.
 
 ## Module migration map
 

@@ -1,140 +1,89 @@
+"""Generate one candidate; repairs share a single request-level allowance."""
 from __future__ import annotations
 
+import time
 import asyncio
-import logging
-from typing import cast
 
 import config
+from guardrails.output import scrub_output
+from services.answer_contracts import EvidencePassage, GenerationResult
+from services.generation import build_snapshot, generate_answer_async
 from workflows.crag.state import CRAGState
 
-logger = logging.getLogger(__name__)
 
-from services.generation import generate_direct_answer_async, generate_rag_answer_async, generate_web_answer_async, generate_hybrid_answer_async
+def remaining_time(state: CRAGState, operation_limit: float) -> float:
+    return min(operation_limit, max(0.0, state["answer_deadline"] - time.monotonic()))
+
+
+def operational_response(state: CRAGState, message: str, status: str = "UNKNOWN") -> CRAGState:
+    return {**state, "answer": scrub_output(message), "citations": [], "source": "guardrail",
+            "verification_status": status, "is_grounded": False if status == "UNSUPPORTED" else None,
+            "nli_verdict": "NOT_CHECKED", "nli_score": None}
 
 
 async def direct_answer_node(state: CRAGState) -> CRAGState:
+    state = {**state, "answer_deadline": time.monotonic() + config.TIMEOUT_ANSWER_STAGE}
+    limit = remaining_time(state, config.TIMEOUT_GENERATION)
+    request_started = False
     try:
-        result = await asyncio.wait_for(
-            generate_direct_answer_async(
-                question=state["question"], conversation_history=state.get("conversation_history", ""),
-            ), timeout=config.TIMEOUT_GENERATION,
-        )
-        answer = result.get("answer", "")
+        if limit <= 0:
+            raise TimeoutError()
+        request_started = True
+        result = await asyncio.wait_for(generate_answer_async(
+            state["question"], [], source="llm", conversation_history=state.get("conversation_history", ""),
+            timeout=limit,
+        ), timeout=limit)
+    except (TimeoutError, asyncio.TimeoutError):
+        result = GenerationResult(status="TIMEOUT", error_kind="timeout", source="llm", request_made=request_started)
     except Exception:
-        logger.warning("Direct generation unavailable")
-        answer = "I could not generate an answer right now. Please try again."
-    return {**state, "answer": answer, "source": "llm", "is_grounded": False}
+        result = GenerationResult(status="ERROR", error_kind="provider_error", source="llm")
+    telemetry = [{"stage": "generation", **result.model_dump(exclude={"answer", "claims", "citations"})}]
+    if result.status != "SUCCESS":
+        return {**operational_response(state, "I could not generate an answer right now. Please try again."),
+                "generation_status": result.status, "answer_attempts": telemetry}
+    return {**state, "answer": result.answer, "citations": [], "source": "llm", "generation_status": "SUCCESS",
+            "verification_status": "SKIPPED", "is_grounded": None, "nli_verdict": "NOT_CHECKED", "nli_score": None,
+            "groundedness_reason": "No source verification applies to this direct answer.", "answer_attempts": telemetry}
 
 
 async def generate_node(state: CRAGState) -> CRAGState:
-    question = state["question"]
-    eval_result = state.get("evaluation_result", "CORRECT")
-    chunks = state.get("chunks", [])
-    web_results = state.get("web_results", [])
-    retry_count = state.get("groundedness_retry_count", 0)
-    strict_mode = retry_count > 0
-
-    conversation_history = state.get("conversation_history", "")
+    state = {**state, "answer_deadline": state.get("answer_deadline") or time.monotonic() + config.TIMEOUT_ANSWER_STAGE}
+    chunks, web = state.get("chunks", []), state.get("web_results", [])
+    source = "hybrid" if chunks and web else "web_search" if web or state.get("route") == "web_search" else "rag"
+    request_started = False
     try:
-        evidence_status = state.get("evidence_status")
-        evidence_options = {
-            "evidence_status": evidence_status,
-            "missing_requirements": state.get("missing_requirements", ""),
-        } if evidence_status else {}
-        if evidence_status and not web_results:
-            coro = generate_rag_answer_async(
-                question, chunks, strict=strict_mode, conversation_history=conversation_history,
-                **evidence_options,
-            )
-        elif evidence_status and chunks and web_results:
-            coro = generate_hybrid_answer_async(
-                question, chunks, web_results, conversation_history=conversation_history,
-                **evidence_options,
-            )
-        elif evidence_status and web_results:
-            coro = generate_web_answer_async(
-                question, web_results, conversation_history=conversation_history,
-            )
-        elif eval_result == "CORRECT":
-            coro = generate_rag_answer_async(
-                question, chunks, strict=strict_mode, conversation_history=conversation_history
-            )
-        elif eval_result == "INCORRECT":
-            coro = generate_web_answer_async(
-                question, web_results, conversation_history=conversation_history
-            )
-        else:  # AMBIGUOUS
-            coro = generate_hybrid_answer_async(
-                question, chunks, web_results, conversation_history=conversation_history
-            )
-
-        result = await asyncio.wait_for(coro, timeout=config.TIMEOUT_GENERATION)
-    except asyncio.TimeoutError:
-        logger.warning("Generation node timed out after %.1fs.", config.TIMEOUT_GENERATION)
-        result = {
-            "answer": "I apologize, but answering your request took longer than expected. Please try again or simplify your question.",
-            "source": "llm",
-            "citations": [],
-        }
-    except Exception as e:
-        logger.exception("Generation error: %s", e)
-        result = {
-            "answer": "An error occurred while generating the answer. Please try again.",
-            "source": "llm",
-            "citations": [],
-        }
-
-    return {
-        **state,
-        "answer": result["answer"],
-        "source": result["source"],
-        "citations": result["citations"],
-    }
+        if "generation_snapshot" in state:
+            snapshot = [EvidencePassage.model_validate(p) for p in state["generation_snapshot"]]
+        else:
+            snapshot, truncated = build_snapshot(chunks, web)
+            state["generation_snapshot"] = [p.model_dump() for p in snapshot]
+            if truncated:
+                state["evidence_status"] = "PARTIAL"
+                state["missing_requirements"] = (state.get("missing_requirements", "") + " Some evidence was omitted by the generation context budget.")[:1000]
+            state["snapshot_truncated"] = truncated
+        prior = GenerationResult.model_validate(state["generation_result"]) if state.get("generation_result") else None
+        limit = remaining_time(state, config.TIMEOUT_GENERATION)
+        if limit <= 0:
+            raise TimeoutError()
+        request_started = True
+        result = await asyncio.wait_for(generate_answer_async(
+            state["question"], snapshot, source=source, evidence_status=state.get("evidence_status") or None,
+            missing_requirements=state.get("missing_requirements", ""), conflicting_ids=state.get("conflicting_ids", []),
+            conversation_history=state.get("conversation_history", ""),
+            previous_draft=prior.answer if prior else "", feedback=state.get("repair_feedback"),
+            timeout=limit,
+        ), timeout=limit)
+    except (TimeoutError, asyncio.TimeoutError):
+        result = GenerationResult(status="TIMEOUT", error_kind="timeout", source=source, request_made=request_started)
+    except Exception:
+        result = GenerationResult(status="ERROR", error_kind="invalid_snapshot", source=source)
+    return {**state, "answer": "", "citations": [], "source": source, "is_grounded": None,
+            "verification_status": "UNKNOWN", "generation_status": result.status,
+            "generation_result": result.model_dump(),
+            "answer_attempts": state.get("answer_attempts", []) + [{"stage": "generation", **result.model_dump(exclude={"answer", "claims", "citations"})}]}
 
 
 async def strict_constrained_generator_node(state: CRAGState) -> CRAGState:
-    """Strict Constrained Generator (Temperature 0.0 Retry) upon NLI contradiction/neutral."""
-    question = state["question"]
-    chunks = state.get("chunks", [])
-    retry_count = state.get("groundedness_retry_count", 0)
-    conversation_history = state.get("conversation_history", "")
-
-    logger.warning(
-        "Strict Constrained Generator: Re-generating answer with temperature 0.0 strict factuality (retry %d).",
-        retry_count + 1,
-    )
-
-    try:
-        result = await asyncio.wait_for(
-            generate_rag_answer_async(
-                question,
-                chunks,
-                strict=True,
-                conversation_history=conversation_history,
-                evidence_status=state.get("evidence_status"),
-                missing_requirements=state.get("missing_requirements", ""),
-            ),
-            timeout=config.TIMEOUT_GENERATION,
-        )
-    except asyncio.TimeoutError:
-        logger.warning("Strict generation node timed out after %.1fs.", config.TIMEOUT_GENERATION)
-        result = {
-            "answer": "I apologize, but verifying the answer took longer than expected.",
-            "source": "llm",
-            "citations": [],
-        }
-    except Exception as e:
-        logger.exception("Strict constrained generation error: %s", e)
-        result = {
-            "answer": "An error occurred during strict constrained generation.",
-            "source": "llm",
-            "citations": [],
-        }
-
-    return {
-        **state,
-        "answer": result["answer"],
-        "source": result["source"],
-        "citations": result["citations"],
-        "groundedness_retry_count": retry_count + 1,
-    }
+    if state.get("answer_repairs_used", 0) >= 1:
+        return {**state, "generation_result": GenerationResult(status="ERROR", error_kind="repair_exhausted").model_dump()}
+    return await generate_node({**state, "answer_repairs_used": 1, "groundedness_retry_count": 1})

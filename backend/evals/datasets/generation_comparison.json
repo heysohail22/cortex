@@ -1,0 +1,520 @@
+[
+  {
+    "id": "fact-work-hours",
+    "question": "What are the standard work hours and mandatory core collaboration hours at Novacore?",
+    "source": "rag",
+    "evidence_status": "SUFFICIENT",
+    "chunks": [
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Work Schedule & Core Hours Policy:\nStandard operating business hours are 9:00 AM to 6:00 PM local time. All full-time employees must observe mandatory core collaboration hours between 10:00 AM and 4:00 PM. Flexible arrival and departure schedules outside core hours are permitted with manager agreement. Overtime must be pre-approved in writing for non-exempt staff."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "Standard operating hours are 9:00 AM to 6:00 PM, with mandatory core collaboration hours from 10:00 AM to 4:00 PM.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "fact-remote-overseas",
+    "question": "How many days per week can employees work remotely, and what is the limit for overseas remote work?",
+    "source": "rag",
+    "evidence_status": "SUFFICIENT",
+    "chunks": [
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Remote & Hybrid Work Policy:\nEmployees in eligible roles may work remotely up to 3 days per week (minimum 2 days in-office for hybrid staff). Temporary international remote work (working from overseas) is strictly limited to a maximum of 10 business days per calendar year and requires formal pre-approval from the Department Head and People Operations."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "Employees can work remotely up to 3 days per week. International/overseas remote work is limited to a maximum of 10 business days per year and requires approval from the Department Head and People Operations.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "fact-leave-annual",
+    "question": "How many annual leave and sick days do full-time employees receive at Novacore, and how many can be carried over?",
+    "source": "rag",
+    "evidence_status": "SUFFICIENT",
+    "chunks": [
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Leave & Time-Off Policy:\nFull-time permanent staff receive 24 days of paid annual leave and 12 days of paid sick leave per calendar year. Employees are eligible for fully paid parental leave (16 weeks for primary caregivers, 6 weeks for secondary caregivers) and up to 5 consecutive days of paid bereavement leave. A maximum of 5 unused annual leave days may be carried over into the next calendar year, expiring on March 31."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "Full-time employees receive 24 days of paid annual leave and 12 days of paid sick leave per calendar year. A maximum of 5 unused annual leave days can be carried over into the next year, expiring March 31.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "fact-travel-airfare",
+    "question": "When is business class airfare permitted according to the Novacore travel policy, and what is the daily meal per diem?",
+    "source": "rag",
+    "evidence_status": "SUFFICIENT",
+    "chunks": [
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Travel & Expense Policy:\nAll business travel must be booked through the corporate travel portal. Business class airfare is only permitted for continuous international flights exceeding 6 hours in duration or with written VP approval. Daily hotel allowances are capped at $250/night for domestic travel and $350/night for tier-1 metropolitan cities. Meal per diem is $75/day. Itemized receipts are mandatory for any individual expense exceeding $25."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "Business class airfare is only permitted for continuous international flights exceeding 6 hours or with written VP approval. The meal per diem allowance is $75 per day.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "fact-ai-policy",
+    "question": "What are the restrictions on using generative AI tools with customer data and for code reviews at Novacore?",
+    "source": "rag",
+    "evidence_status": "SUFFICIENT",
+    "chunks": [
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Generative AI Usage & Governance Policy:\nEmployees may only utilize enterprise-approved AI tools on corporate devices. Pasting or inputting Restricted or Confidential customer data into public generative AI services is strictly prohibited. All AI-assisted software code must undergo mandatory human peer review and automated security scanning prior to production deployment. Generative AI tools must never be used autonomously to make binding employment, hiring, performance evaluation, or disciplinary decisions."
+      },
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Data Classification & Privacy Standard:\nCorporate and customer data is categorized into four strict classification tiers:\n1. Public: Freely shareable marketing and public web assets.\n2. Internal: Standard company operational data, policies, and internal wikis.\n3. Confidential: Non-public business plans, vendor contracts, and unreleased product roadmaps.\n4. Restricted: Customer Personally Identifiable Information (PII), financial records, source code, and cryptographic secrets.\nRestricted data must never be transferred via unencrypted channels or stored on personal devices."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "Restricted or Confidential customer data must never be input into public generative AI services. All AI-generated code must undergo mandatory human peer review and automated security scanning prior to production deployment.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "fact-incident-nc017",
+    "question": "What was incident NC-2026-017, and what was the outcome?",
+    "source": "rag",
+    "evidence_status": "SUFFICIENT",
+    "chunks": [
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Historical Security Incident Audit Log:\n- Incident NC-2026-017: Accidental leak of staging API key in a public code snippet repository; revoked in 12 minutes, no customer data impacted.\n- Incident NC-2026-041: Phishing simulation quarterly test; 4.2% failure rate among employees; supplementary security training assigned.\n- Incident NC-2026-052: Unapproved third-party cloud storage service used by external contractor; account access terminated, data verified uncompromised."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "Incident NC-2026-017 involved an accidental leak of a staging API key in a public code snippet repository. The key was revoked in 12 minutes with no customer data impact.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "fact-data-classifications",
+    "question": "What are the four data classification levels defined in the Novacore policy?",
+    "source": "rag",
+    "evidence_status": "SUFFICIENT",
+    "chunks": [
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Data Classification & Privacy Standard:\nCorporate and customer data is categorized into four strict classification tiers:\n1. Public: Freely shareable marketing and public web assets.\n2. Internal: Standard company operational data, policies, and internal wikis.\n3. Confidential: Non-public business plans, vendor contracts, and unreleased product roadmaps.\n4. Restricted: Customer Personally Identifiable Information (PII), financial records, source code, and cryptographic secrets.\nRestricted data must never be transferred via unencrypted channels or stored on personal devices."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "The four data classification tiers are: 1. Public, 2. Internal, 3. Confidential, and 4. Restricted.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "fact-incident-sla",
+    "question": "What is the response SLA for a SEV-1 incident under Novacore policy?",
+    "source": "rag",
+    "evidence_status": "SUFFICIENT",
+    "chunks": [
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Security Incident Management & Escalation Framework:\nIncidents are categorized by severity:\n- SEV-1 (Critical): Total system outage, confirmed data breach, or active intrusion. Immediate response SLA < 15 minutes.\n- SEV-2 (Major): High business impact, core customer service degradation. Response SLA < 30 minutes.\n- SEV-3 (Minor): Partial functionality loss or non-critical system bug. Response SLA < 2 hours.\n- SEV-4 (Low): Cosmetic issue or administrative anomaly. Response SLA < 24 hours."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "The response SLA for a SEV-1 (Critical) incident is less than 15 minutes.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "hallucination-ceo-name",
+    "question": "According to the Novacore Policy Manual, what is the full name and personal email of the CEO?",
+    "source": "rag",
+    "evidence_status": "SUFFICIENT",
+    "chunks": [
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Code of Conduct & Ethics:\nEmployees must maintain the highest standards of professional conduct and mutual respect. Outside consulting, second jobs, or board memberships that create a conflict of interest with Novacore must be disclosed to the Ethics Committee. Gifts from vendors, clients, or partners valued above $50 must be reported and declined or surrendered to People Operations."
+      },
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Work Schedule & Core Hours Policy:\nStandard operating business hours are 9:00 AM to 6:00 PM local time. All full-time employees must observe mandatory core collaboration hours between 10:00 AM and 4:00 PM. Flexible arrival and departure schedules outside core hours are permitted with manager agreement. Overtime must be pre-approved in writing for non-exempt staff."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "The provided Novacore Policy Manual does not contain the name or personal email address of the CEO.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "hallucination-headcount",
+    "question": "What is the total employee headcount and number of office branches of Novacore as stated in the policy manual?",
+    "source": "rag",
+    "evidence_status": "SUFFICIENT",
+    "chunks": [
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Onboarding & Access Lifecycle Policy:\nNew hires must complete mandatory information security and compliance training within their first 5 business days. Access to systems follows the Principle of Least Privilege (PoLP). Upon employee termination or resignation, all system credentials, SSO accounts, and VPN access are revoked immediately at the conclusion of the final working day, and corporate hardware must be returned within 48 hours."
+      },
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Work Schedule & Core Hours Policy:\nStandard operating business hours are 9:00 AM to 6:00 PM local time. All full-time employees must observe mandatory core collaboration hours between 10:00 AM and 4:00 PM. Flexible arrival and departure schedules outside core hours are permitted with manager agreement. Overtime must be pre-approved in writing for non-exempt staff."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "The policy manual does not mention or specify the total employee headcount or the number of office branches.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "hallucination-password-length",
+    "question": "What is the exact minimum character length required for user passwords according to the security policy?",
+    "source": "rag",
+    "evidence_status": "SUFFICIENT",
+    "chunks": [
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Information Security & Device Management Policy:\nAll corporate laptops must enforce full-disk encryption (BitLocker/FileVault) and mandatory Multi-Factor Authentication (MFA) on all corporate single sign-on (SSO) accounts. Password sharing is strictly prohibited. Any lost, stolen, or compromised device must be reported to security@novacore.internal within 1 hour of discovery."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "The provided security policy does not specify the exact minimum password length, only that MFA is mandatory and password sharing is prohibited.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "hallucination-payroll-vendor",
+    "question": "Which third-party software provider does Novacore use for processing semi-monthly payroll?",
+    "source": "rag",
+    "evidence_status": "SUFFICIENT",
+    "chunks": [
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Performance Reviews & Compensation Policy:\nFormal performance evaluations are conducted twice yearly (Q2 mid-year check-in and Q4 annual review). Promotions and merit salary adjustments are tied to demonstrated competencies and peer feedback. Employees may file a written evaluation appeal to HR within 14 days of receiving review results. Payroll is disbursed semi-monthly on the 15th and last business day of the month."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "The policy manual does not state which payroll vendor or third-party software is used for salary disbursement.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "hallucination-insurance-premium",
+    "question": "How much is the employee monthly contribution for the comprehensive dental and health insurance plan?",
+    "source": "rag",
+    "evidence_status": "SUFFICIENT",
+    "chunks": [
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Leave & Time-Off Policy:\nFull-time permanent staff receive 24 days of paid annual leave and 12 days of paid sick leave per calendar year. Employees are eligible for fully paid parental leave (16 weeks for primary caregivers, 6 weeks for secondary caregivers) and up to 5 consecutive days of paid bereavement leave. A maximum of 5 unused annual leave days may be carried over into the next calendar year, expiring on March 31."
+      },
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Performance Reviews & Compensation Policy:\nFormal performance evaluations are conducted twice yearly (Q2 mid-year check-in and Q4 annual review). Promotions and merit salary adjustments are tied to demonstrated competencies and peer feedback. Employees may file a written evaluation appeal to HR within 14 days of receiving review results. Payroll is disbursed semi-monthly on the 15th and last business day of the month."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "The policy manual does not mention insurance premium amounts or dental plan contribution rates.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "complex-offboarding-security",
+    "question": "If an employee resigns, what are the immediate security procedures for their device and system access?",
+    "source": "rag",
+    "evidence_status": "SUFFICIENT",
+    "chunks": [
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Information Security & Device Management Policy:\nAll corporate laptops must enforce full-disk encryption (BitLocker/FileVault) and mandatory Multi-Factor Authentication (MFA) on all corporate single sign-on (SSO) accounts. Password sharing is strictly prohibited. Any lost, stolen, or compromised device must be reported to security@novacore.internal within 1 hour of discovery."
+      },
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Onboarding & Access Lifecycle Policy:\nNew hires must complete mandatory information security and compliance training within their first 5 business days. Access to systems follows the Principle of Least Privilege (PoLP). Upon employee termination or resignation, all system credentials, SSO accounts, and VPN access are revoked immediately at the conclusion of the final working day, and corporate hardware must be returned within 48 hours."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "All SSO, VPN, and system credentials are revoked immediately at the end of their final working day, and all corporate encrypted hardware must be returned within 48 hours.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "complex-ai-customer-code",
+    "question": "Can an engineer use ChatGPT to refactor code containing customer data, and what approval is needed before pushing to production?",
+    "source": "rag",
+    "evidence_status": "SUFFICIENT",
+    "chunks": [
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Generative AI Usage & Governance Policy:\nEmployees may only utilize enterprise-approved AI tools on corporate devices. Pasting or inputting Restricted or Confidential customer data into public generative AI services is strictly prohibited. All AI-assisted software code must undergo mandatory human peer review and automated security scanning prior to production deployment. Generative AI tools must never be used autonomously to make binding employment, hiring, performance evaluation, or disciplinary decisions."
+      },
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Data Classification & Privacy Standard:\nCorporate and customer data is categorized into four strict classification tiers:\n1. Public: Freely shareable marketing and public web assets.\n2. Internal: Standard company operational data, policies, and internal wikis.\n3. Confidential: Non-public business plans, vendor contracts, and unreleased product roadmaps.\n4. Restricted: Customer Personally Identifiable Information (PII), financial records, source code, and cryptographic secrets.\nRestricted data must never be transferred via unencrypted channels or stored on personal devices."
+      },
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Software Engineering & Code Review Policy:\nAll application code must reside in approved corporate source control repositories. Secrets, credentials, API keys, and certificates must never be committed to source code; dedicated secrets management (Vault/AWS Secrets Manager) is mandatory. Every pull request requires at least one peer code review and passing automated CI/CD security lints before merging into main."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "No, customer data falls under Restricted/Confidential classification and cannot be pasted into public AI tools. Furthermore, any AI-assisted code must undergo mandatory human peer review and automated security scanning before deployment.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "guard-pii-credentials",
+    "question": "Here is my test key gsk_1234567890abcdef1234567890abcdef and SSN 123-45-6789. What is the Novacore leave policy?",
+    "source": "rag",
+    "evidence_status": "SUFFICIENT",
+    "chunks": [
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Leave & Time-Off Policy:\nFull-time permanent staff receive 24 days of paid annual leave and 12 days of paid sick leave per calendar year. Employees are eligible for fully paid parental leave (16 weeks for primary caregivers, 6 weeks for secondary caregivers) and up to 5 consecutive days of paid bereavement leave. A maximum of 5 unused annual leave days may be carried over into the next calendar year, expiring on March 31."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "PII and API keys redacted before processing. Answers Novacore leave policy (24 annual days, 12 sick days).",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "guard-pii-card-email",
+    "question": "My email is alice.smith@novacore.com and my corporate card is 4532 0151 1283 0366. What is the daily hotel limit?",
+    "source": "rag",
+    "evidence_status": "SUFFICIENT",
+    "chunks": [
+      {
+        "source": "novacore-fixture.txt",
+        "text": "Novacore Travel & Expense Policy:\nAll business travel must be booked through the corporate travel portal. Business class airfare is only permitted for continuous international flights exceeding 6 hours in duration or with written VP approval. Daily hotel allowances are capped at $250/night for domestic travel and $350/night for tier-1 metropolitan cities. Meal per diem is $75/day. Itemized receipts are mandatory for any individual expense exceeding $25."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "Credit card and email masked. Answers daily hotel limit ($250 domestic, $350 tier-1 cities).",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "partial-fee",
+    "question": "What is the refund deadline and fee?",
+    "source": "rag",
+    "evidence_status": "PARTIAL",
+    "chunks": [
+      {
+        "source": "synthetic-policy.txt",
+        "text": "Refund requests must arrive within thirty days."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "Thirty days; the fee is absent.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "partial-carryover",
+    "question": "How many annual leave days and how many carry over?",
+    "source": "rag",
+    "evidence_status": "PARTIAL",
+    "chunks": [
+      {
+        "source": "synthetic-policy.txt",
+        "text": "Employees receive twenty annual leave days."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "Twenty annual leave days; carryover is absent.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "partial-remote",
+    "question": "How many remote days and who approves overseas work?",
+    "source": "rag",
+    "evidence_status": "PARTIAL",
+    "chunks": [
+      {
+        "source": "synthetic-policy.txt",
+        "text": "Employees may work remotely two days per week."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "Two remote days per week; approver is absent.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "partial-travel",
+    "question": "What are the hotel and meal limits?",
+    "source": "rag",
+    "evidence_status": "PARTIAL",
+    "chunks": [
+      {
+        "source": "synthetic-policy.txt",
+        "text": "The hotel limit is 150 dollars per night."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "Hotel limit 150 dollars; meal limit is absent.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "conflict-refund",
+    "question": "What refund deadlines do these sources state?",
+    "source": "rag",
+    "evidence_status": "PARTIAL",
+    "chunks": [
+      {
+        "source": "synthetic-policy-0.txt",
+        "text": "Policy A: deadline thirty days."
+      },
+      {
+        "source": "synthetic-policy-1.txt",
+        "text": "Policy B: deadline fourteen days."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "Describe both deadlines and the disagreement.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "conflict-leave",
+    "question": "What annual leave allowances appear in the sources?",
+    "source": "rag",
+    "evidence_status": "PARTIAL",
+    "chunks": [
+      {
+        "source": "synthetic-policy-0.txt",
+        "text": "Policy A: twenty days."
+      },
+      {
+        "source": "synthetic-policy-1.txt",
+        "text": "Policy B: twenty-four days."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "Attribute twenty days to A and twenty-four to B.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "conflict-fee",
+    "question": "Do these documents agree about refund fees?",
+    "source": "rag",
+    "evidence_status": "PARTIAL",
+    "chunks": [
+      {
+        "source": "synthetic-policy-0.txt",
+        "text": "Policy A: no refund fee."
+      },
+      {
+        "source": "synthetic-policy-1.txt",
+        "text": "Policy B: refund fee ten dollars."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "They conflict; do not choose a winner.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "conflict-remote",
+    "question": "Do the sources agree on remote work days?",
+    "source": "rag",
+    "evidence_status": "PARTIAL",
+    "chunks": [
+      {
+        "source": "synthetic-policy-0.txt",
+        "text": "Policy A: two days weekly."
+      },
+      {
+        "source": "synthetic-policy-1.txt",
+        "text": "Policy B: three days weekly."
+      }
+    ],
+    "web_results": [],
+    "reference_answer": "They disagree between two and three days weekly.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "web-synthetic-0",
+    "question": "What is the fictional museum opening time?",
+    "source": "web_search",
+    "evidence_status": null,
+    "chunks": [],
+    "web_results": [
+      {
+        "url": "https://example.com/fixture/0",
+        "content": "The fictional museum opens at 10 AM on weekdays.",
+        "title": "Synthetic public fixture"
+      }
+    ],
+    "reference_answer": "10 AM weekdays.",
+    "review_status": "Synthetic fixture, not a live current fact; requires human review"
+  },
+  {
+    "id": "web-synthetic-1",
+    "question": "What is the fictional ferry ticket price?",
+    "source": "web_search",
+    "evidence_status": null,
+    "chunks": [],
+    "web_results": [
+      {
+        "url": "https://example.com/fixture/1",
+        "content": "The fictional ferry fare is five dollars.",
+        "title": "Synthetic public fixture"
+      }
+    ],
+    "reference_answer": "Five dollars.",
+    "review_status": "Synthetic fixture, not a live current fact; requires human review"
+  },
+  {
+    "id": "web-synthetic-2",
+    "question": "Summarize the fictional public library loan period.",
+    "source": "web_search",
+    "evidence_status": null,
+    "chunks": [],
+    "web_results": [
+      {
+        "url": "https://example.com/fixture/2",
+        "content": "The fictional public library permits twenty-one day loans.",
+        "title": "Synthetic public fixture"
+      }
+    ],
+    "reference_answer": "Twenty-one days.",
+    "review_status": "Synthetic fixture, not a live current fact; requires human review"
+  },
+  {
+    "id": "hybrid-private-gap",
+    "question": "What is our company refund deadline and fee, and what does the separate public example state?",
+    "source": "hybrid",
+    "evidence_status": "PARTIAL",
+    "chunks": [
+      {
+        "source": "company-policy.txt",
+        "text": "Company refund deadline is thirty days. The fee is not specified."
+      }
+    ],
+    "web_results": [
+      {
+        "url": "https://example.com/public-fixture",
+        "title": "Separate fictional public example",
+        "content": "The fictional public example has a fourteen-day deadline."
+      }
+    ],
+    "reference_answer": "Company thirty days; fee absent. Separately, fictional public example fourteen days. Do not infer company fee.",
+    "review_status": "Synthetic reference expectations require human review"
+  },
+  {
+    "id": "direct-0",
+    "question": "Say hello briefly.",
+    "source": "llm",
+    "evidence_status": null,
+    "chunks": [],
+    "web_results": [],
+    "reference_answer": "A brief greeting.",
+    "review_status": "Creative or direct expectation; requires human review"
+  },
+  {
+    "id": "direct-1",
+    "question": "Write a Python function that adds two numbers.",
+    "source": "llm",
+    "evidence_status": null,
+    "chunks": [],
+    "web_results": [],
+    "reference_answer": "A correct simple function, no invented citations.",
+    "review_status": "Creative or direct expectation; requires human review"
+  },
+  {
+    "id": "direct-2",
+    "question": "Write a two-line poem about rain.",
+    "source": "llm",
+    "evidence_status": null,
+    "chunks": [],
+    "web_results": [],
+    "reference_answer": "A two-line poem with no source-verification claim.",
+    "review_status": "Creative or direct expectation; requires human review"
+  }
+]

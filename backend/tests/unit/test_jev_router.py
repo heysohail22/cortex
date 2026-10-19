@@ -4,6 +4,7 @@ from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from services.answer_contracts import GenerationResult
 
 from services.routing import classify_with_jev
 from workflows.crag.nodes import router_node, direct_answer_node
@@ -60,7 +61,7 @@ async def test_invalid_probability_and_uncertain_intent():
 
 
 async def test_router_does_not_generate():
-    with patch("workflows.crag.nodes.router.classify_async", AsyncMock(return_value={"route": "direct_answer"})), patch("workflows.crag.nodes.generation.generate_direct_answer_async", AsyncMock()) as generate:
+    with patch("workflows.crag.nodes.router.classify_async", AsyncMock(return_value={"route": "direct_answer"})), patch("workflows.crag.nodes.generation.generate_answer_async", AsyncMock()) as generate:
         result = await router_node({"question": "hello", "has_documents": False})
     generate.assert_not_awaited()
     assert result["answer"] == ""
@@ -69,7 +70,7 @@ async def test_router_does_not_generate():
 async def test_graph_direct_and_blocked_paths():
     graph = _build_crag_graph()
     for route in ("direct_answer", "unsafe", "unavailable", "clarify"):
-        with patch("workflows.crag.nodes.router.classify_async", AsyncMock(return_value={"route": route, "direct_answer": "controlled"})), patch("workflows.crag.nodes.generation.generate_direct_answer_async", AsyncMock(return_value={"answer": "hello"})) as generate:
+        with patch("workflows.crag.nodes.router.classify_async", AsyncMock(return_value={"route": route, "direct_answer": "controlled"})), patch("workflows.crag.nodes.generation.generate_answer_async", AsyncMock(return_value=GenerationResult(status="SUCCESS", answer="hello", source="llm"))) as generate:
             result = await graph.ainvoke({"question": "hello", "has_documents": False})
         assert result["answer"] == ("hello" if route == "direct_answer" else "controlled")
         assert generate.await_count == (1 if route == "direct_answer" else 0)

@@ -89,7 +89,7 @@ async def retrieval_correction_node(state: CRAGState) -> CRAGState:
 
 def terminal_response(state: CRAGState, answer: str, route: str) -> CRAGState:
     return {**state, "finalize_action": "", "answer": answer, "route": route, "source": "guardrail", "citations": [],
-            "is_grounded": False, "nli_verdict": "NOT_CHECKED", "nli_score": 0.0,
+            "is_grounded": None, "verification_status": "SKIPPED", "nli_verdict": "NOT_CHECKED", "nli_score": None,
             "groundedness_reason": "No factual answer was verified."}
 
 

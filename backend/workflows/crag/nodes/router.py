@@ -24,5 +24,5 @@ async def router_node(state: CRAGState) -> CRAGState:
         **state, "route": route, "router_decision": classification,
         "answer": classification.get("direct_answer", "") if terminal else "",
         "source": "guardrail" if terminal else "",
-        "is_grounded": False if terminal else state.get("is_grounded", False),
+        "is_grounded": None, "verification_status": "SKIPPED", "nli_score": None, "nli_verdict": "NOT_CHECKED",
     }

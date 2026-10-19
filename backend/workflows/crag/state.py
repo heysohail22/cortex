@@ -8,6 +8,15 @@ from typing_extensions import TypedDict
 
 
 class CRAGState(TypedDict):
+    verification_status: str
+    generation_status: str
+    generation_result: Dict[str, Any]
+    generation_snapshot: List[Dict[str, Any]]
+    snapshot_truncated: bool
+    answer_deadline: float
+    answer_repairs_used: int
+    repair_feedback: Dict[str, Any]
+    answer_attempts: List[Dict[str, Any]]
     evidence_status: str
     retrieval_status: str
     retrieval_deadline: float
@@ -49,9 +58,9 @@ class CRAGState(TypedDict):
     answer: str
     source: str                         # "rag" | "web_search" | "hybrid" | "llm"
     citations: List[str]
-    is_grounded: bool                   # Independent Judge result
+    is_grounded: bool | None                   # Independent Judge result
     groundedness_reason: str
     groundedness_retry_count: int       # Guard against infinite hallucination retry loops
     contextualized_query: str           # Resolved standalone query from Query Contextualizer
     nli_verdict: str                    # "ENTAILMENT" | "NEUTRAL" | "CONTRADICTION"
-    nli_score: float                    # Entailment probability / score (0.0 to 1.0)
+    nli_score: float | None                    # Entailment probability / score (0.0 to 1.0)

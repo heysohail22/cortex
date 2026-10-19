@@ -421,6 +421,7 @@ export default function Home() {
           evaluationResult: data.evaluation_result,
           evaluationReason: data.evaluation_reason,
           isGrounded: data.is_grounded,
+          verificationStatus: data.verification_status,
           groundednessReason: data.groundedness_reason,
           route: data.route,
           transformedQuery: data.transformed_query,

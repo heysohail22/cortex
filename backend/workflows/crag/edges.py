@@ -50,26 +50,12 @@ def decide_after_supplement(state: CRAGState) -> str:
 def decide_after_groundedness(
     state: CRAGState
 ) -> Literal["strict_retry_node", "safe_fallback_node", "END"]:
-    """
-    NLI Groundedness Check with Strict Loop Bounds:
-    - Entailment (Grounded >= 0.85): Terminate to END / Output Guard.
-    - Contradiction / Neutral (Attempt 1, retry_count < 1): Route to Strict Constrained Generator.
-    - Contradiction / Neutral (Retry Exhausted, retry_count >= 1): Route to Safe Refusal & Verbatim Fallback.
-    """
-    if state.get("nli_verdict") == "NOT_CHECKED":
+    """Only a failed support check can use the single answer repair allowance."""
+    import time
+    status = state.get("verification_status", "UNKNOWN")
+    if status in ("SUPPORTED", "SKIPPED"):
         return "END"
-    is_grounded = state.get("is_grounded", True)
-    retry_count = state.get("groundedness_retry_count", 0)
-
-    if is_grounded:
-        return "END"
-
-    if retry_count < 1:
-        logger.warning(
-            "NLI Groundedness Judge detected hallucination/contradiction (retry %d/1). Routing to Strict Constrained Generator...",
-            retry_count,
-        )
+    if (status == "UNSUPPORTED" and state.get("answer_repairs_used", 0) < 1
+            and time.monotonic() < state.get("answer_deadline", 0)):
         return "strict_retry_node"
-
-    logger.warning("NLI Groundedness retry limit reached (%d). Routing to Safe Refusal Fallback...", retry_count)
     return "safe_fallback_node"

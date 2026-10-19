@@ -291,7 +291,7 @@ There are currently no automated frontend tests in the repository. Manual verifi
 4. Partial or missing evidence can trigger one targeted rewrite and correction retrieval. Retain and deduplicate useful passages across attempts.
 5. After correction, generate a supported full or partial answer, clarify, or return a missing-evidence response. Database/provider failures remain unavailable outcomes.
 6. Public supplementation requires an explicit trusted policy and independently approved public query. Missing private facts never trigger automatic public web substitution.
-7. **Generate** uses bounded context. The document groundedness judge permits one repair before safe fallback. Supplemental public evidence is explicitly unverified by that document-only judge.
+7. **Generate** uses bounded context. An independent judge checks document, web and hybrid answers against the exact generation snapshot, with one shared repair allowance. Verification errors are UNKNOWN; direct and terminal responses are SKIPPED. Only SUPPORTED sets is_grounded=true.
 
 Retry bounds live in `workflows/crag/edges.py` and `workflows/crag/nodes/retrieval.py`. See `backend/docs/jev_retrieval.md` for deadlines and known verification limitations.
 

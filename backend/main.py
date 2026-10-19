@@ -18,7 +18,10 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         from providers.typesafe import close_client
-        await close_client()
+        from providers.groq import close_answer_client as close_groq
+        from providers.gemini import close_answer_client as close_gemini
+        import asyncio
+        await asyncio.gather(close_client(), close_groq(), close_gemini())
 
 
 app = FastAPI(

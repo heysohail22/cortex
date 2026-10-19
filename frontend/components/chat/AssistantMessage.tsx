@@ -1,5 +1,7 @@
 "use client";
 
+import { verificationLabel, type VerificationStatus } from "@/lib/verification";
+
 import React, { useState } from "react";
 import { Copy, Check } from "lucide-react";
 import { Sources } from "./Sources";
@@ -33,7 +35,8 @@ export interface MessageData {
   webResults?: WebResultData[];
   evaluationResult?: string;
   evaluationReason?: string;
-  isGrounded?: boolean;
+  isGrounded?: boolean | null;
+  verificationStatus?: VerificationStatus;
   groundednessReason?: string;
   route?: string;
   transformedQuery?: string;
@@ -100,11 +103,7 @@ function renderInline(text: string): React.ReactNode {
 }
 
 function formatMarkdown(text: string): React.ReactNode {
-  // Strip any manual source footnotes or inline Source: lines anywhere at the end of the text
-  const cleanedText = text
-    .replace(/^\s*[\*\_\-\s]*Sources?[\*\_\-\s]*:\s*.*$/gim, "")
-    .replace(/^\s*[\*\_\-\s]*Sources?[\*\_\-\s]*:?\s*\[?[^\]\n]+\]?\s*[\*\_\-\s]*$/gim, "")
-    .trim();
+  const cleanedText = text.trim();
 
   const lines = cleanedText.split("\n");
   const elements: React.ReactNode[] = [];
@@ -208,6 +207,10 @@ export function AssistantMessage({
             <>
               {formatMarkdown(message.content)}
 
+              <p className="mt-2 text-[11px] text-zinc-400" title="Source support does not guarantee that a source is correct or current.">
+                {verificationLabel(message.verificationStatus)}
+              </p>
+
               {/* Sources */}
               {message.citations && message.citations.length > 0 && (
                 <Sources
@@ -227,6 +230,7 @@ export function AssistantMessage({
                 evaluationResult={message.evaluationResult}
                 evaluationReason={message.evaluationReason}
                 isGrounded={message.isGrounded}
+                verificationStatus={message.verificationStatus}
                 groundednessReason={message.groundednessReason}
                 route={message.route}
                 transformedQuery={message.transformedQuery}

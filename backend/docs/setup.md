@@ -7,7 +7,7 @@ uv sync
 cp .env.example .env
 ```
 
-Configure the provider credentials in `.env`. Never commit this file. Jev setup is described in [the router guide](jev_router.md), with retrieval options in [the retrieval guide](jev_retrieval.md).
+Configure the provider credentials in `.env`. Never commit this file. Jev setup is described in [the router guide](jev_router.md), with retrieval options in [the retrieval guide](jev_retrieval.md) and answer configuration in [generation and verification](generation_verification.md).
 
 ```bash
 # Development server

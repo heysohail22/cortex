@@ -91,41 +91,14 @@ class TestOutputGuardrails(unittest.TestCase):
 
 
 class TestStrictHallucinationFallback(unittest.IsolatedAsyncioTestCase):
-    @patch("workflows.crag.nodes.verification.evaluate_groundedness_async")
-    async def test_strict_fallback_when_hallucination_unresolvable(self, mock_eval):
-        # Simulate Groundedness Judge finding answer UNGROUNDED on 2nd attempt (retry_count = 1)
-        mock_eval.return_value = (False, "Factual claims contradict document.")
-
-        state: CRAGState = {
-            "question": "What is the secret policy?",
-            "session_id": "session-1",
-            "has_documents": True,
-            "document_names": ["policy.pdf"],
-            "route": "rag",
-            "chunks": [{"text": "Company policy allows 15 vacation days.", "source": "policy.pdf"}],
-            "refined_chunks": [],
-            "evaluation_result": "CORRECT",
-            "evaluation_reason": "",
-            "db_retry_count": 0,
-            "transformed_query": "",
-            "db_rewritten_query": "",
-            "web_rewritten_query": "",
-            "web_results": [],
-            "answer": "Company policy gives 99 days of paid vacation to everyone.",  # Hallucination!
-            "source": "rag",
-            "citations": ["policy.pdf"],
-            "is_grounded": False,
-            "groundedness_reason": "",
-            "groundedness_retry_count": 1,  # Strict retry was already performed!
-        }
-
-        result = await groundedness_check_node(state)
-
-        # Must trigger strict fallback refusal
+    async def test_strict_fallback_when_hallucination_unresolvable(self):
+        from workflows.crag.nodes import safe_fallback_node
+        result = await safe_fallback_node({"verification_status": "UNSUPPORTED", "answer_repairs_used": 1, "answer": "Rejected draft"})
         self.assertEqual(result["source"], "guardrail")
         self.assertEqual(result["route"], "hallucination_fallback")
         self.assertEqual(result["citations"], [])
-        self.assertIn("could not find verifiable facts", result["answer"])
+        self.assertFalse(result["is_grounded"])
+        self.assertNotIn("Rejected draft", result["answer"])
 
 
 if __name__ == "__main__":

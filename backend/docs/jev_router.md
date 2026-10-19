@@ -32,4 +32,4 @@ Before claiming a speed or quality improvement, compare the existing and Jev rou
 
 ## Deferred phases
 
-Retrieval correction, generation model selection, truthful groundedness failure states, and the broader guardrail/evaluation rewrite are separate follow-up phases. Existing groundedness timeout behavior is not fixed by this router migration.
+Retrieval correction and typed generation/verification are now implemented as subsequent phases. See [retrieval](jev_retrieval.md) and [generation and verification](generation_verification.md). Live model selection and the broader guardrail/evaluation rewrite remain separate work.

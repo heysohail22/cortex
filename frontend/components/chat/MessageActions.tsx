@@ -1,5 +1,7 @@
 "use client";
 
+import type { VerificationStatus } from "@/lib/verification";
+
 import React, { useState } from "react";
 import {
   Copy,
@@ -22,7 +24,8 @@ interface MessageActionsProps {
   webResults?: Array<{ title: string; url: string; content: string }>;
   evaluationResult?: string;
   evaluationReason?: string;
-  isGrounded?: boolean;
+  isGrounded?: boolean | null;
+  verificationStatus?: VerificationStatus;
   groundednessReason?: string;
   route?: string;
   transformedQuery?: string;
@@ -43,6 +46,7 @@ export function MessageActions({
   evaluationResult,
   evaluationReason,
   isGrounded,
+  verificationStatus,
   groundednessReason,
   route,
   transformedQuery,
@@ -211,6 +215,7 @@ export function MessageActions({
         evaluationResult={evaluationResult}
         evaluationReason={evaluationReason}
         isGrounded={isGrounded}
+        verificationStatus={verificationStatus}
         groundednessReason={groundednessReason}
         route={route}
         transformedQuery={transformedQuery}

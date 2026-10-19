@@ -1,105 +1,49 @@
+"""Verify the displayed candidate against exactly the generation evidence snapshot."""
 from __future__ import annotations
 
 import asyncio
-import logging
-from typing import cast
+from guardrails.output import scrub_output
 
-import config
+from services.answer_contracts import EvidencePassage, GenerationResult, VerificationResult
+from services.verification import verify_answer_async
+from workflows.crag.nodes.generation import operational_response, remaining_time
 from workflows.crag.state import CRAGState
-
-logger = logging.getLogger(__name__)
-
-from services.verification import evaluate_groundedness_async
+import config
 
 
 async def groundedness_check_node(state: CRAGState) -> CRAGState:
-    """Evaluates whether the generated answer is strictly grounded in the context via NLI."""
-    source = state.get("source", "rag")
-
-    if state.get("external_search_used") and state.get("web_results"):
-        return {**state, "is_grounded": False, "groundedness_reason": "Public supplementation has not been verified by the document-only judge.",
-                "nli_verdict": "NOT_CHECKED", "nli_score": 0.0}
-
-    # If pure web search, guardrail, or general llm, skip doc groundedness check
-    if source in ("web_search", "guardrail", "llm"):
-        return {
-            **state,
-            "is_grounded": True,
-            "groundedness_reason": "Skipped for non-rag source.",
-            "nli_verdict": "ENTAILMENT",
-            "nli_score": 1.0,
-        }
-
-    question = state["question"]
-    answer = state.get("answer", "")
-    chunks = state.get("chunks", [])
-
-    context = "\n\n".join(c.get("text", "") for c in chunks)
-
+    request_started = False
     try:
-        eval_res = await asyncio.wait_for(
-            evaluate_groundedness_async(question, context, answer),
-            timeout=config.TIMEOUT_GROUNDEDNESS,
-        )
-        is_grounded = eval_res.is_grounded if hasattr(eval_res, "is_grounded") else eval_res[0]
-        reason = eval_res.reason if hasattr(eval_res, "reason") else eval_res[1]
-        verdict = getattr(eval_res, "verdict", "ENTAILMENT" if is_grounded else "CONTRADICTION")
-        score = getattr(eval_res, "score", 0.95 if is_grounded else 0.4)
-    except asyncio.TimeoutError:
-        logger.warning(
-            "Groundedness judge timed out after %.1fs. Defaulting to is_grounded=True.",
-            config.TIMEOUT_GROUNDEDNESS,
-        )
-        is_grounded, reason, verdict, score = True, "judge_timeout_fallback", "ENTAILMENT", 0.9
-    except Exception as e:
-        logger.warning("Groundedness judge error: %s. Defaulting to is_grounded=True.", e)
-        is_grounded, reason, verdict, score = True, "judge_error_fallback", "ENTAILMENT", 0.9
-
-    retry_count = state.get("groundedness_retry_count", 0)
-    final_answer = answer
-    final_source = source
-    final_citations = state.get("citations", [])
-    final_route = state.get("route", "rag")
-
-    if not is_grounded and retry_count >= 1:
-        logger.warning(
-            "Groundedness Judge: Unresolvable hallucination detected after strict retry (%d). Triggering fallback refusal.",
-            retry_count,
-        )
-        final_answer = (
-            "I reviewed the provided documents, but could not find verifiable facts to answer "
-            "your question with complete confidence. Please check your uploaded files or provide additional details."
-        )
-        final_source = "guardrail"
-        final_citations = []
-        final_route = "hallucination_fallback"
-
-    return {
-        **state,
-        "answer": final_answer,
-        "source": final_source,
-        "citations": final_citations,
-        "route": final_route,
-        "is_grounded": is_grounded,
-        "groundedness_reason": reason,
-        "nli_verdict": verdict,
-        "nli_score": score,
-    }
+        generation = GenerationResult.model_validate(state["generation_result"])
+        if generation.error_kind == "no_evidence":
+            return {**operational_response(state, "I could not find supporting evidence to answer this question. Please provide a relevant source or clarify your question.", "SKIPPED"),
+                    "route": "no_answer_evidence"}
+        snapshot = [EvidencePassage.model_validate(p) for p in state.get("generation_snapshot", [])]
+        limit = remaining_time(state, config.TIMEOUT_GROUNDEDNESS)
+        if limit <= 0:
+            raise TimeoutError()
+        request_started = True
+        result = await asyncio.wait_for(verify_answer_async(
+            state["question"], generation, snapshot, evidence_status=state.get("evidence_status"),
+            missing_requirements=state.get("missing_requirements", ""),
+            timeout=limit,
+        ), timeout=limit)
+    except Exception:
+        result = VerificationResult(status="UNKNOWN", reason="Verification unavailable.", request_made=request_started)
+    attempts = state.get("answer_attempts", []) + [{"stage": "verification", **result.model_dump()}]
+    update = {**state, "verification_status": result.status, "groundedness_reason": scrub_output(result.reason),
+              "is_grounded": True if result.status == "SUPPORTED" else False if result.status == "UNSUPPORTED" else None,
+              "nli_verdict": "ENTAILMENT" if result.status == "SUPPORTED" else "NEUTRAL" if result.status == "UNSUPPORTED" else "NOT_CHECKED",
+              "nli_score": None, "answer_attempts": attempts,
+              "repair_feedback": result.model_dump(exclude={"usage", "elapsed_ms", "model", "provider"})}
+    if result.status == "SUPPORTED":
+        return {**update, "answer": generation.answer, "citations": generation.citations}
+    return {**update, "answer": "", "citations": []}
 
 
 async def safe_fallback_node(state: CRAGState) -> CRAGState:
-    """Zero-hallucination honest refusal when unresolvable hallucinations persist."""
-    logger.warning("Safe Fallback Node triggered: Emitting honest refusal.")
-    return {
-        **state,
-        "answer": (
-            "I reviewed the provided documents, but could not find verifiable facts to answer "
-            "your question with complete confidence. Please check your uploaded files or provide additional details."
-        ),
-        "source": "guardrail",
-        "citations": [],
-        "route": "hallucination_fallback",
-        "is_grounded": True,
-        "nli_verdict": "SAFE_REFUSAL",
-        "nli_score": 1.0,
-    }
+    unsupported = state.get("verification_status") == "UNSUPPORTED"
+    message = ("I could not verify a supported answer from the available evidence. Please provide more information or clarify your question."
+               if unsupported else "I could not complete answer verification right now. Please try again shortly.")
+    return {**operational_response(state, message, "UNSUPPORTED" if unsupported else "UNKNOWN"),
+            "route": "hallucination_fallback" if unsupported else "answer_unavailable"}

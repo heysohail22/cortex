@@ -44,7 +44,7 @@ Trusted server callers can pass external_evidence_policy="public_supplement" and
 
 At most one public search runs. Its snippets are assessed before use and excluded snippets are not passed to generation. Public results cannot establish missing private policy facts. Hybrid generation receives distinct document and web context. Web failure falls back to retained partial evidence or a limitation response. Assessment failures and exhausted stage deadlines return temporary unavailable responses.
 
-The existing document-only groundedness judge does not verify supplemented web/hybrid answers. Those are explicitly NOT_CHECKED and is_grounded=false, without a repair loop pretending to verify them. The broader verification redesign remains a separate phase.
+The subsequent generation phase verifies document, web and hybrid answers against the exact generation snapshot. Failed verification is UNKNOWN rather than approved; unsupported drafts can be repaired once. See [generation and verification](generation_verification.md).
 
 ## Validation and limits
 

@@ -10,6 +10,7 @@ import pytest
 from workflows.crag.graph import _build_crag_graph, run_crag_async
 from workflows.crag.nodes import retrieval as nodes
 from services.evidence import RetrievalEvaluation, evaluate_retrieval_async
+from services.answer_contracts import GenerationResult, VerificationResult
 from retrieval.evidence import bounded_candidates, merge_candidates
 from services.query_rewriting import RetrievalRewrite, rewrite_retrieval_query_async
 
@@ -113,8 +114,8 @@ async def execute_graph(retrievals, assessments, rewrite, **kwargs):
          patch.object(nodes, "evaluate_retrieval_async", AsyncMock(side_effect=assessments)) as assess, \
          patch.object(nodes, "rewrite_retrieval_query_async", AsyncMock(return_value=rewrite)) as rewriter, \
          patch.object(nodes, "search_web_async", AsyncMock()) as web, \
-         patch("workflows.crag.nodes.generation.generate_rag_answer_async", AsyncMock(return_value={"answer": "supported", "source": "rag", "citations": ["policy.pdf"]})) as generate, \
-         patch("workflows.crag.nodes.verification.evaluate_groundedness_async", AsyncMock(return_value=(True, "supported"))):
+         patch("workflows.crag.nodes.generation.generate_answer_async", AsyncMock(return_value=GenerationResult(status="SUCCESS", answer="supported", source="rag", citations=["policy.pdf"]))) as generate, \
+         patch("workflows.crag.nodes.verification.verify_answer_async", AsyncMock(return_value=VerificationResult(status="SUPPORTED", reason="supported"))):
         result = await _build_crag_graph().ainvoke(state(**kwargs))
     return result, retrieve, assess, rewriter, web, generate
 
@@ -223,16 +224,19 @@ async def test_web_failure_does_not_launch_another_search():
 
 
 async def test_real_rewriter_contract_and_generator_partial_prompt():
-    from services.generation import generate_rag_answer_async
-    from langchain_core.messages import AIMessage
+    from services.generation import generate_answer_async, build_snapshot
+    from providers.structured import StructuredResponse
     with patch("services.query_rewriting._groq_query_base") as model:
         model.with_structured_output.return_value.ainvoke = AsyncMock(return_value=RetrievalRewrite(query="fees", missing_requirements="fee"))
         rewrite = await rewrite_retrieval_query_async("deadline and fee", [A], "PARTIAL")
     assert rewrite.query == "fees"
-    with patch("services.generation._groq_generator", NS(ainvoke=AsyncMock(return_value=AIMessage(content="Deadline thirty days; fee missing.")))) as model:
-        await generate_rag_answer_async("q", [A], evidence_status="PARTIAL", missing_requirements="fee")
-    prompt = model.ainvoke.call_args.args[0][0].content
-    assert "PARTIAL" in prompt and "fee" in prompt and "model memory" in prompt
+    snapshot, _ = build_snapshot([A], [])
+    with patch("services.generation.generate_structured", AsyncMock(return_value=StructuredResponse(
+        data={"answer": "Deadline thirty days; fee missing.", "claims": [{"text": "Deadline thirty days", "evidence_ids": [snapshot[0].id], "source_kind": "document"}]}, model="test"))) as provider:
+        result = await generate_answer_async("q", snapshot, source="rag", evidence_status="PARTIAL", missing_requirements="fee")
+    assert result.status == "SUCCESS"
+    assert provider.call_args.kwargs["payload"]["evidence_status"] == "PARTIAL"
+    assert "model memory" in provider.call_args.kwargs["system"]
 
 
 def test_truncated_retained_identity_deduplicates_original():
@@ -247,20 +251,20 @@ async def test_assessment_failure_clears_previous_evidence():
     assert result["evidence_status"] == "UNKNOWN" and not result["retained_evidence"]
 
 
-async def test_full_public_supplement_graph_is_bounded_and_unverified():
+async def test_full_public_supplement_graph_is_bounded_and_verified():
     public = {"url": "https://example.com/rules", "content": "Public rule", "title": "Rules"}
     with patch("workflows.crag.nodes.router.classify_async", AsyncMock(return_value={"route": "rag"})), \
          patch.object(nodes.vs, "similarity_search", Mock(return_value=[A])), \
          patch.object(nodes, "evaluate_retrieval_async", AsyncMock(side_effect=[assessment("PARTIAL", [A]), assessment("PARTIAL", [{"source": public["url"], "text": public["content"]}])])), \
          patch.object(nodes, "rewrite_retrieval_query_async", AsyncMock(return_value=RetrievalRewrite())), \
          patch.object(nodes, "search_web_async", AsyncMock(return_value=[public])) as web, \
-         patch("workflows.crag.nodes.generation.generate_hybrid_answer_async", AsyncMock(return_value={"answer": "Document deadline; separate public rule.", "source": "hybrid", "citations": ["policy.pdf", public["url"]]})) as generate, \
-         patch("workflows.crag.nodes.verification.evaluate_groundedness_async", AsyncMock()) as judge:
+         patch("workflows.crag.nodes.generation.generate_answer_async", AsyncMock(return_value=GenerationResult(status="SUCCESS", answer="Document deadline; separate public rule.", source="hybrid", citations=["policy.pdf", public["url"]]))) as generate, \
+         patch("workflows.crag.nodes.verification.verify_answer_async", AsyncMock(return_value=VerificationResult(status="SUPPORTED"))) as judge:
         result = await _build_crag_graph().ainvoke(state(external_evidence_policy="public_supplement", approved_public_query="public rules"))
     assert web.await_count == generate.await_count == 1
-    assert result["source"] == "hybrid" and not result["is_grounded"]
-    assert result["nli_verdict"] == "NOT_CHECKED"
-    judge.assert_not_awaited()
+    assert result["source"] == "hybrid" and result["is_grounded"]
+    assert result["verification_status"] == "SUPPORTED"
+    judge.assert_awaited_once()
 
 
 async def test_public_assessment_unknown_cannot_reenter_generation():

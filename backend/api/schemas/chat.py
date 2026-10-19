@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
+from typing import Literal
 
 
 class ChatRequest(BaseModel):
@@ -39,6 +40,9 @@ class ChatResponse(BaseModel):
     retrieval_corrections_used: int = 0
     evaluation_result: str | None = None
     evaluation_reason: str | None = None
+    verification_status: Literal["SUPPORTED", "UNSUPPORTED", "UNKNOWN", "SKIPPED"] | None = None
+    generation_status: Literal["SUCCESS", "ERROR", "TIMEOUT"] | None = None
+    answer_repairs_used: int = 0
     is_grounded: bool | None = None
     groundedness_reason: str | None = None
     transformed_query: str | None = None
