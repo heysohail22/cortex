@@ -23,31 +23,28 @@ The backend is implemented in Python with **FastAPI** and **LangGraph**, and the
 
 ## Repository Layout
 
-```
+```text
 Cortex/
-├── backend/                 # FastAPI + LangGraph Python service
-│   ├── api/                 # FastAPI routers (chat, documents)
-│   ├── crag/                # Corrective RAG graph, nodes, edges, state
-│   ├── guardrails/          # Rate limiting, prompt guard, PII redaction, ingestion guard, output guard
-│   ├── rag/                 # Document parsing, embeddings, Supabase vector store
-│   ├── services/            # LLM business logic (router, generator, search, groundedness judge, evaluator)
-│   ├── evals/               # Evaluation framework (dataset, evaluator, runner, report)
-│   ├── tests/               # Backend unit and integration tests
-│   ├── main.py              # FastAPI application entry point
-│   ├── config.py            # Environment-driven configuration
-│   ├── pyproject.toml       # Python project metadata and dependencies
-│   ├── requirements.txt     # Plain-text dependency mirror
-│   └── langgraph.json       # LangGraph CLI graph registration
-├── frontend/                # Next.js 16 (App Router) chat UI
-│   ├── app/                 # App Router pages and components
-│   ├── package.json         # NPM dependencies and scripts
-│   ├── pnpm-lock.yaml       # pnpm lockfile
-│   ├── pnpm-workspace.yaml  # pnpm workspace config
-│   ├── next.config.ts       # Next.js config
-│   ├── tsconfig.json        # TypeScript config
-│   ├── eslint.config.mjs    # ESLint config (Next.js core-web-vitals + typescript)
-│   └── postcss.config.mjs   # PostCSS config for Tailwind v4
-└── AGENTS.md                # This file
+├── backend/
+│   ├── api/                  # HTTP handlers and schemas/
+│   ├── workflows/crag/       # Graph, state, edges and nodes/
+│   ├── services/             # Routing, evidence, rewriting and generation policy
+│   ├── providers/            # TypeSafe, Groq and Tavily adapters
+│   ├── retrieval/            # Embeddings, vector search, evidence and ingestion/
+│   ├── repositories/         # Supabase client, metadata, history and file storage
+│   ├── guardrails/           # Input, ingestion, PII, output and rate limiting
+│   ├── evals/                # datasets/, metrics/, runner and reports/
+│   ├── tests/                # unit/ and integration/
+│   ├── docs/                 # Architecture and setup guides
+│   ├── config.py             # Environment configuration
+│   ├── main.py               # FastAPI application entry point
+│   ├── langgraph.json        # LangGraph CLI entry point
+│   ├── Dockerfile
+│   └── pyproject.toml
+├── frontend/                 # Next.js chat UI
+├── docker-compose.yml
+├── AGENTS.md
+└── README.md
 ```
 
 ---
@@ -86,35 +83,23 @@ Cortex/
 
 ### Backend Modules
 
-- **`api/chat.py`** — `/api/chat` endpoint. Applies guardrails, runs the CRAG workflow, and scrubs/verifies the output.
-- **`api/documents.py`** — `/api/documents/upload`, `/api/documents`, and `/api/documents/{filename}` endpoints. Validates file magic, parses documents, and indexes chunks.
-- **`crag/`** — The CRAG workflow:
-  - `state.py` — `CRAGState` typed dictionary.
-  - `nodes.py` — LangGraph node functions (router, retrieve, evaluate, web search, generate, groundedness judge, direct web search).
-  - `edges.py` — Conditional routing with strict loop bounds.
-  - `graph.py` — Compiles the `StateGraph` and exposes `run_crag_async()` / `run_crag()`.
-- **`guardrails/`** — Security and reliability controls:
-  - `prompt_guard.py` — Prompt injection/jailbreak detection (heuristics + optional local Hugging Face model).
-  - `pii_redactor.py` — Regex-based PII/secrets redaction with optional Microsoft Presidio NER.
-  - `ingestion_guard.py` — File magic-byte validation, text sanitization, indirect prompt injection scanning.
-  - `output_guard.py` — Output scrubbing for secrets/system delimiters and citation verification.
-  - `rate_limiter.py` — In-memory sliding-window rate limiter.
-- **`rag/`** — Document processing and retrieval:
-  - `document_processor.py` — Parses files, sanitizes text, redacts PII, chunks, and indexes.
-  - `embeddings.py` — Gemini embedding clients for documents and queries.
-  - `vector_store.py` — Supabase `document_chunks` table operations.
-- **`services/`** — Pure domain services used by CRAG nodes:
-  - `router_service.py` — Route classifier with structured outputs.
-  - `evaluator_service.py` — Retrieval evaluator with bundled query rewriting.
-  - `search_service.py` — Tavily search and query rewriting.
-  - `generator_service.py` — RAG, web, and hybrid answer generation with context budgets.
-  - `groundedness_service.py` — Independent groundedness judge.
-  - `llm_service.py` — Direct LLM fallback.
-- **`evals/`** — Evaluation framework:
-  - `dataset.py` — `EvalSample` dataclass and curated benchmark dataset.
-  - `evaluator.py` — Faithfulness, relevance, guardrail safety, and route accuracy metrics.
-  - `runner.py` — CLI and programmatic benchmark runner.
-  - `report.py` — Markdown and CSV report generation.
+- `api/chat.py` and `api/documents.py`: HTTP handlers; public models live in `api/schemas/`.
+- `workflows/crag/graph.py`: graph assembly and `run_crag_async` / `run_crag` entry points.
+- `workflows/crag/state.py` and `edges.py`: workflow state and deterministic branching.
+- `workflows/crag/nodes/`: separate router, retrieval, generation, verification and web nodes.
+- `services/routing.py`: intent and safety policies, including explicit Groq rollback.
+- `services/evidence.py`: typed evidence assessment and passage policy.
+- `services/query_rewriting.py`: conditional retrieval and web query rewriting.
+- `services/generation.py`, `verification.py`, `direct_answers.py`: answer prompts and checks.
+- `services/conversations.py`: history budgeting and summarization.
+- `providers/typesafe.py`, `groq.py`, `tavily.py`: external client integration.
+- `retrieval/evidence.py`: stable chunk IDs, deduplication and context budgets.
+- `retrieval/vector_store.py` and `embeddings.py`: scoped vector search and embeddings.
+- `retrieval/ingestion/`: parsing, chunk preparation and indexing orchestration.
+- `repositories/client.py`: shared Supabase client; `documents.py`, `conversations.py` and `storage.py` own persistence.
+- `guardrails/`: `input.py`, `ingestion.py`, `output.py`, `pii.py` and `rate_limiter.py`.
+- `evals/datasets/`: samples and static benchmark inputs; `evals/metrics/`: scoring.
+- `docs/architecture.md`: dependency rules and migration map. Older `.agents/spec/` documents use pre-refactor paths; resolve them using this map.
 
 ### Frontend Structure
 
@@ -248,11 +233,11 @@ backend/.venv/bin/python -m pytest tests/ -q
 
 Test files:
 
-- `tests/test_guardrails.py` — Rate limiting, prompt guard, PII redaction, ingestion guard.
-- `tests/test_api_guardrails.py` — FastAPI `TestClient` tests for health, chat blocking, and upload validation.
-- `tests/test_context_budget.py` — Context budget capping and web-result cleaning.
-- `tests/test_crag_reliability.py` — CRAG routing, loop bounds, and node timeout fallbacks.
-- `tests/test_eval_framework.py` — Evaluation dataset serialization and guardrail scoring.
+- `tests/unit/test_guardrails.py` — Rate limiting, prompt guard, PII redaction, ingestion guard.
+- `tests/integration/test_api_guardrails.py` — FastAPI `TestClient` tests for health, chat blocking, and upload validation.
+- `tests/unit/test_context_budget.py` — Context budget capping and web-result cleaning.
+- `tests/unit/test_crag_reliability.py` — CRAG routing, loop bounds, and node timeout fallbacks.
+- `tests/unit/test_eval_framework.py` — Evaluation dataset serialization and guardrail scoring.
 
 ### Evaluation Benchmark
 
@@ -281,7 +266,7 @@ There are currently no automated frontend tests in the repository. Manual verifi
 - Use `from __future__ import annotations` at the top of files.
 - Prefer `async`/`await` for I/O-bound work; wrap blocking calls with `asyncio.to_thread`.
 - Use Pydantic `BaseModel` for structured LLM outputs.
-- Keep business logic in `services/` and orchestration in `crag/`; routers in `api/` should be thin.
+- Keep business logic in `services/` and orchestration in `workflows/crag/`; routers in `api/` should be thin.
 - All timeout values are centralized in `config.py` and applied per-node via `asyncio.wait_for`.
 - Use module-level singletons for LLM clients and vector store clients (lazy initialization where possible).
 - Guardrails are organized as classes with static/global helper functions.
@@ -300,16 +285,15 @@ There are currently no automated frontend tests in the repository. Manual verifi
 
 ## CRAG Workflow Summary
 
-1. **Router** classifies the user question into `rag`, `web_search`, `direct_answer`, or `unsafe`.
-2. **Retrieve** fetches the top-k document chunks from Supabase.
-3. **Retrieval Evaluator** classifies chunks as `CORRECT`, `INCORRECT`, or `AMBIGUOUS`, and rewrites queries.
-4. If `INCORRECT`, the pipeline retries retrieval once, then falls back to **web search**.
-5. If `AMBIGUOUS`, it proceeds to a **hybrid** answer using both documents and web results.
-6. **Generate** produces an answer with strict context budgets.
-7. **Groundedness Judge** verifies the answer is supported by the retrieved context.
-8. If ungrounded, the pipeline retries once with a stricter prompt, then falls back to a safe refusal.
+1. **Router** uses Jev for intent and separate safety assessments; uncertain or failed assessments stop before tools.
+2. **Retrieve** fetches top-k chunks within the existing session scope.
+3. **Evidence assessment** selects safe useful passages and returns SUFFICIENT, PARTIAL, NONE or UNKNOWN. Legacy API labels remain CORRECT, AMBIGUOUS, INCORRECT and UNKNOWN.
+4. Partial or missing evidence can trigger one targeted rewrite and correction retrieval. Retain and deduplicate useful passages across attempts.
+5. After correction, generate a supported full or partial answer, clarify, or return a missing-evidence response. Database/provider failures remain unavailable outcomes.
+6. Public supplementation requires an explicit trusted policy and independently approved public query. Missing private facts never trigger automatic public web substitution.
+7. **Generate** uses bounded context. The document groundedness judge permits one repair before safe fallback. Supplemental public evidence is explicitly unverified by that document-only judge.
 
-Loop bounds are hard-coded in `crag/edges.py` to prevent infinite cycles.
+Retry bounds live in `workflows/crag/edges.py` and `workflows/crag/nodes/retrieval.py`. See `backend/docs/jev_retrieval.md` for deadlines and known verification limitations.
 
 ---
 
@@ -321,7 +305,7 @@ Loop bounds are hard-coded in `crag/edges.py` to prevent infinite cycles.
 - **File upload validation** checks magic bytes, rejects executable payloads, and validates file-extension/header consistency.
 - **Indirect prompt injection** in uploaded documents is scanned and quarantined at chunk level.
 - **Output guardrails** scrub leaked secrets/system delimiters and verify citations against real sources.
-- **Rate limiting** is applied per client IP + session ID on chat and upload endpoints using a sliding-window limiter.
+- **Rate limiting** is applied per ASGI client identity on chat and upload endpoints using a sliding-window limiter.
 - **CORS** in `main.py` is restricted to `localhost:3000` and the production Vercel deployment URL.
 
 ---
@@ -339,10 +323,10 @@ Loop bounds are hard-coded in `crag/edges.py` to prevent infinite cycles.
 
 - `backend/main.py` — FastAPI app and middleware.
 - `backend/config.py` — Central configuration.
-- `backend/crag/graph.py` — CRAG workflow compiler and public runner.
-- `backend/crag/edges.py` — Workflow routing and loop bounds.
+- `backend/workflows/crag/graph.py` — CRAG workflow compiler and public runner.
+- `backend/workflows/crag/edges.py` — Workflow routing and loop bounds.
 - `backend/guardrails/__init__.py` — Public guardrail API surface.
-- `backend/services/__init__.py` — Public service API surface.
+- `backend/services/` — Application policy modules; import their functions explicitly.
 - `frontend/app/page.tsx` — Main application page.
 - `frontend/app/globals.css` — Design tokens and theme.
 - `frontend/package.json` — Scripts and dependencies.

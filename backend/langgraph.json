@@ -1,7 +1,7 @@
 {
   "dependencies": ["."],
   "graphs": {
-    "agent": "./crag/graph.py:_crag_graph"
+    "agent": "./workflows/crag/graph.py:_crag_graph"
   },
   "env": ".env"
 }

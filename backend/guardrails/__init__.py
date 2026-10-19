@@ -6,19 +6,19 @@ from guardrails.rate_limiter import (
     get_client_identifier,
     rate_limit,
 )
-from guardrails.prompt_guard import (
+from guardrails.input import (
     PromptGuard,
     PromptGuardResult,
     check_prompt,
     check_prompt_async,
 )
-from guardrails.pii_redactor import (
+from guardrails.pii import (
     PIIRedactor,
     PIIRedactResult,
     redact_pii,
     redact_pii_async,
 )
-from guardrails.ingestion_guard import (
+from guardrails.ingestion import (
     IndirectInjectionResult,
     IngestionGuard,
     sanitize_text,
@@ -26,7 +26,7 @@ from guardrails.ingestion_guard import (
     validate_file_magic,
     wrap_context_boundary,
 )
-from guardrails.output_guard import (
+from guardrails.output import (
     process_output,
     scrub_output,
     verify_citations,

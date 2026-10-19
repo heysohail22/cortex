@@ -184,51 +184,29 @@ Security and hallucination prevention are enforced at three distinct layers:
 
 ```text
 Cortex/
-├── backend/                         # FastAPI + LangGraph service
-│   ├── api/                         # REST API endpoints
-│   │   ├── chat.py                  # POST /api/chat, DELETE /api/sessions/{id}
-│   │   └── documents.py             # Upload, list, url, and delete endpoints
-│   ├── crag/                        # LangGraph workflow definition
-│   │   ├── graph.py                 # Graph compilation and execution runners
-│   │   ├── nodes.py                 # Router, retrieve, eval, search, generate, judge
-│   │   ├── edges.py                 # Conditional routing and loop bounds
-│   │   └── state.py                 # CRAGState TypedDict
-│   ├── guardrails/                  # 3-tier security implementations
-│   │   ├── rate_limiter.py          # Sliding window rate limiter
-│   │   ├── prompt_guard.py          # Heuristic & neural injection defense
-│   │   ├── pii_redactor.py          # Regex & Presidio PII masker
-│   │   ├── ingestion_guard.py       # Magic bytes & indirect injection scanner
-│   │   └── output_guard.py          # Delimiter scrubber & citation validator
-│   ├── rag/                         # Document parsing & storage
-│   │   ├── document_processor.py    # Multi-format parser, sanitization, chunking
-│   │   ├── embeddings.py            # Gemini 768-dim embedding clients
-│   │   ├── vector_store.py          # Supabase pgvector operations & RPC
-│   │   └── storage_service.py       # Supabase Storage bucket management
-│   ├── services/                    # Domain logic & LLM services
-│   │   ├── router_service.py        # Structured intent classifier
-│   │   ├── evaluator_service.py     # Retrieval quality evaluation & rewrite
-│   │   ├── search_service.py        # Tavily search query generator & client
-│   │   ├── generator_service.py     # Budgeted generation (RAG, Web, Hybrid)
-│   │   ├── groundedness_service.py  # NLI semantic fact-check judge
-│   │   └── conversation_service.py  # Session history & LLM summarization
-│   ├── evals/                       # Automated benchmarking suite
-│   ├── tests/                       # Pytest unit and integration tests
-│   ├── config.py                    # Central environment configuration
-│   ├── main.py                      # FastAPI application entrypoint
-│   ├── Dockerfile                   # Production backend container image
-│   └── pyproject.toml               # Python dependencies and metadata
-├── frontend/                        # Next.js 16 Chat UI
-│   ├── app/                         # App Router pages and layouts
-│   │   ├── components/              # ChatInput, ChatMessage, Sidebar, Upload
-│   │   ├── globals.css              # Tailwind v4 theme and design tokens
-│   │   ├── layout.tsx               # Root application layout
-│   │   └── page.tsx                 # Main interactive chat interface
-│   ├── Dockerfile                   # Multi-stage production frontend image
-│   └── package.json                 # Node dependencies and scripts
-├── docker-compose.yml               # Container orchestration for full stack
-├── AGENTS.md                        # Coding guidelines for AI assistants
-└── README.md                        # Documentation (this file)
+├── backend/
+│   ├── api/                  # HTTP handlers and schemas/
+│   ├── workflows/crag/       # Graph, state, edges and nodes/
+│   ├── services/             # Routing, evidence, rewriting and generation policy
+│   ├── providers/            # TypeSafe, Groq and Tavily adapters
+│   ├── retrieval/            # Embeddings, vector search, evidence and ingestion/
+│   ├── repositories/         # Supabase client, metadata, history and file storage
+│   ├── guardrails/           # Input, ingestion, PII, output and rate limiting
+│   ├── evals/                # datasets/, metrics/, runner and reports/
+│   ├── tests/                # unit/ and integration/
+│   ├── docs/                 # Architecture and setup guides
+│   ├── config.py             # Environment configuration
+│   ├── main.py               # FastAPI application entry point
+│   ├── langgraph.json        # LangGraph CLI entry point
+│   ├── Dockerfile
+│   └── pyproject.toml
+├── frontend/                 # Next.js chat UI
+├── docker-compose.yml
+├── AGENTS.md
+└── README.md
 ```
+
+See [backend architecture](backend/docs/architecture.md) for module ownership and [backend setup](backend/docs/setup.md) for run commands.
 
 ---
 

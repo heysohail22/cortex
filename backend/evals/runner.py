@@ -10,11 +10,12 @@ import sys
 import time
 from typing import Any, Dict, List, Optional
 
-from crag import run_crag_async
+from workflows.crag import run_crag_async
 from guardrails import check_prompt_async, process_output, redact_pii_async
-from evals.dataset import DEFAULT_BENCHMARK_DATASET, EvalSample, load_dataset
-from rag import vector_store as vs
-from evals.evaluator import evaluate_sample_async
+from evals.datasets.samples import DEFAULT_BENCHMARK_DATASET, EvalSample, load_dataset
+from retrieval import vector_store as vs
+from repositories import documents
+from evals.metrics.scoring import evaluate_sample_async
 from evals.report import generate_markdown_report, print_cli_summary
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -32,7 +33,7 @@ def _seed_eval_documents(session_id: str, sample_id: str, chunks: List[str]) -> 
 def _cleanup_eval_documents(session_id: str, source: str) -> None:
     """Remove seeded eval documents for the session."""
     try:
-        vs.delete_document(session_id, source)
+        documents.delete_document(session_id, source)
     except Exception as e:
         logger.warning("Failed to cleanup eval documents for %s: %s", session_id, e)
 

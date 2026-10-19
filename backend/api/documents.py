@@ -5,11 +5,12 @@ import logging
 import os
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from pydantic import BaseModel
+from api.schemas.documents import UploadResponse, DocumentItem, DocumentListResponse, DeleteResponse, DocumentUrlResponse
 
 import config
 from guardrails import rate_limit, validate_file_magic
-from rag import document_processor, storage_service, vector_store as vs
+from retrieval.ingestion import indexing as document_processor
+from repositories import storage as storage_service, documents as vs
 
 logger = logging.getLogger(__name__)
 
@@ -17,33 +18,6 @@ router = APIRouter(prefix="/api", tags=["documents"])
 
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc", ".txt", ".md", ".rst"}
 MAX_FILE_SIZE_MB = 20
-
-
-class UploadResponse(BaseModel):
-    filename: str
-    chunks: int
-    message: str
-
-
-class DocumentItem(BaseModel):
-    filename: str
-    chunks: int = 0
-
-
-class DocumentListResponse(BaseModel):
-    session_id: str
-    documents: list[str]
-    items: list[DocumentItem] = []
-
-
-class DeleteResponse(BaseModel):
-    message: str
-
-
-class DocumentUrlResponse(BaseModel):
-    filename: str
-    url: str
-
 
 
 @router.post(

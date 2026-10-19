@@ -17,7 +17,7 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        from services.jev_service import close_client
+        from providers.typesafe import close_client
         await close_client()
 
 

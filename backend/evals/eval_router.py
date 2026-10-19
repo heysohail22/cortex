@@ -20,7 +20,7 @@ from typing import Any, Dict, List
 # Ensure backend path is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from services.router_service import classify_async
+from services.routing import classify_async
 
 
 @dataclass

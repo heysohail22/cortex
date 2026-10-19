@@ -19,7 +19,7 @@ import sys
 import urllib.request
 from pathlib import Path
 
-from crag.graph import _crag_graph
+from workflows.crag.graph import _crag_graph
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_PNG_PATH = BASE_DIR / "cortex_nli_workflow_graph.png"
@@ -120,7 +120,6 @@ flowchart TD
     NLIJudge -->|"Contradiction / Neutral: Attempt 1"| StrictRetryGen --> NLIJudge
     NLIJudge -->|"Contradiction / Neutral: Retry Exhausted"| SafeFallback --> FinalStream
 """
-
 
 
 def render_mermaid_ink(mermaid_code: str, output_path: Path, fmt: str = "png", bg_color: str = "0b0f19") -> bool:

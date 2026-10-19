@@ -80,3 +80,12 @@ JEV_SAFETY_THRESHOLD = float(os.getenv("JEV_SAFETY_THRESHOLD", "0.7"))
 JEV_REVIEW_THRESHOLD = float(os.getenv("JEV_REVIEW_THRESHOLD", "0.35"))
 JEV_INTENT_CONFIDENCE = float(os.getenv("JEV_INTENT_CONFIDENCE", "0.6"))
 MAX_CONCURRENT_CHATS = int(os.getenv("MAX_CONCURRENT_CHATS", "8"))
+
+# Retrieval correction: one attempt is enforced in graph code.
+TIMEOUT_RETRIEVAL_STAGE = float(os.getenv("TIMEOUT_RETRIEVAL_STAGE", "25"))
+TIMEOUT_RETRIEVAL_REWRITE = float(os.getenv("TIMEOUT_RETRIEVAL_REWRITE", "4"))
+MAX_EVIDENCE_CONTEXT_CHARS = int(os.getenv("MAX_EVIDENCE_CONTEXT_CHARS", "8000"))
+MAX_EVIDENCE_PASSAGE_CHARS = int(os.getenv("MAX_EVIDENCE_PASSAGE_CHARS", "2000"))
+MAX_EVIDENCE_CANDIDATES = int(os.getenv("MAX_EVIDENCE_CANDIDATES", "10"))
+# Excludes uncertain as well as high-risk passages. Calibrate before deployment.
+JEV_EVIDENCE_INJECTION_MAX = float(os.getenv("JEV_EVIDENCE_INJECTION_MAX", "0.35"))

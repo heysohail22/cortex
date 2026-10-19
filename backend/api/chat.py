@@ -4,22 +4,21 @@ import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from api.schemas.chat import ChatRequest, DeleteSessionResponse, ChunkInfo, WebResultInfo, ChatResponse
 
 import config
-from crag import run_crag_async
+from workflows.crag import run_crag_async
 from guardrails import (
     check_prompt_async,
     process_output,
     rate_limit,
     redact_pii_async,
 )
-from rag import storage_service, vector_store as vs
-from services.conversation_service import (
+from repositories import storage as storage_service, documents as vs
+from services.conversations import get_native_conversation_turns
+from repositories.conversations import (
     delete_conversation,
     get_all_sessions_summary,
-    get_conversation_context,
-    get_native_conversation_turns,
     save_turn,
 )
 
@@ -27,46 +26,6 @@ logger = logging.getLogger(__name__)
 _chat_slots = asyncio.Semaphore(config.MAX_CONCURRENT_CHATS)
 
 router = APIRouter(prefix="/api", tags=["chat"])
-
-
-class ChatRequest(BaseModel):
-    message: str = Field(..., min_length=1, max_length=4000)
-    session_id: str = Field(..., min_length=1, max_length=128)
-    user_id: str | None = Field(None, max_length=128)
-
-
-class DeleteSessionResponse(BaseModel):
-    status: str
-    message: str
-
-
-class ChunkInfo(BaseModel):
-    source: str
-    text: str
-    similarity: float | None = None
-
-
-class WebResultInfo(BaseModel):
-    title: str
-    url: str
-    content: str
-
-
-class ChatResponse(BaseModel):
-    answer: str
-    source: str
-    citations: list[str]
-    route: str
-    suggest_web_search: bool = False
-    chunks: list[ChunkInfo] = []
-    web_results: list[WebResultInfo] = []
-    evaluation_result: str | None = None
-    evaluation_reason: str | None = None
-    is_grounded: bool | None = None
-    groundedness_reason: str | None = None
-    transformed_query: str | None = None
-    nli_verdict: str | None = None
-    nli_score: float | None = None
 
 
 @router.post(
@@ -173,6 +132,9 @@ async def _chat_impl(request: ChatRequest):
             suggest_web_search=result.get("source") == "web_search",
             chunks=clean_chunks,
             web_results=clean_web,
+            evidence_status=result.get("evidence_status"),
+            retrieval_status=result.get("retrieval_status"),
+            retrieval_corrections_used=result.get("retrieval_corrections_used", 0),
             evaluation_result=result.get("evaluation_result") or None,
             evaluation_reason=result.get("evaluation_reason") or None,
             is_grounded=result.get("is_grounded"),
@@ -222,4 +184,3 @@ async def delete_session(session_id: str):
         status="success",
         message=f"Session '{session_id}' deleted successfully",
     )
-
