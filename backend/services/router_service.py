@@ -1,6 +1,6 @@
 """
 Router Service — Intelligent, document-aware LLM classifier.
-Uses Groq with Pydantic structured outputs for high-speed routing and safety checks.
+Uses Jev structured assessments with an explicit legacy Groq rollback.
 """
 from __future__ import annotations
 
@@ -34,12 +34,19 @@ class RouteDecision(BaseModel):
     )
 
 
-# Initialize Groq structured router model
-_groq_router = ChatGroq(
-    model=config.GROQ_REASONING_MODEL,
-    api_key=config.GROQ_API_KEY,
-    temperature=0.0,
-).with_structured_output(RouteDecision)
+# Only initialize the legacy provider when explicit rollback is selected.
+_groq_router = None
+
+
+def _get_groq_router():
+    global _groq_router
+    if _groq_router is None:
+        _groq_router = ChatGroq(
+            model=config.GROQ_REASONING_MODEL,
+            api_key=config.GROQ_API_KEY,
+            temperature=0.0,
+        ).with_structured_output(RouteDecision)
+    return _groq_router
 
 
 def _format_documents(documents: list) -> str:
@@ -101,15 +108,13 @@ def _build_messages(question: str, has_documents: bool, documents: list) -> list
     ]
 
 
-async def classify_async(
+async def _classify_groq_async(
     question: str,
     has_documents: bool,
     document_names: list | None = None,
     documents: list | None = None,
 ) -> Dict[str, Any]:
-    """Asynchronously classify user question with Groq primary and Gemini Flash-Lite fallback."""
-    if question.lower().startswith("search the web for "):
-        return {"route": "web_search", "direct_answer": "", "reason": "UI button override"}
+    """Classify with the legacy Groq provider when explicitly configured."""
 
     docs = documents if documents is not None else (document_names or [])
     messages = _build_messages(question, has_documents, docs)
@@ -118,17 +123,16 @@ async def classify_async(
     # 1. Attempt Primary
     try:
         decision: RouteDecision = await asyncio.wait_for(
-            _groq_router.ainvoke(messages),
+            _get_groq_router().ainvoke(messages),
             timeout=config.TIMEOUT_ROUTER,
         )
         route = decision.route
         reason = getattr(decision, "reason", "")
     except Exception as e:
-        logger.warning("Router classification failed: %s. Using default.", e)
+        logger.warning("Legacy router unavailable (%s)", type(e).__name__)
 
     if not route:
-        route = "rag" if has_documents else "direct_answer"
-        reason = "fallback"
+        return {"route": "unavailable", "direct_answer": "Routing is temporarily unavailable. Please try again.", "reason": "router_error", "status": "error"}
 
     if route == "rag" and not has_documents:
         route = "direct_answer"
@@ -139,6 +143,24 @@ async def classify_async(
         direct_answer = "I cannot provide assistance with malware, cyberattacks, exploit payloads, dangerous weapons, harassment, or self-harm."
 
     return {"route": route, "direct_answer": direct_answer, "reason": reason}
+
+
+async def classify_async(
+    question: str,
+    has_documents: bool,
+    document_names: list | None = None,
+    documents: list | None = None,
+    conversation_history: Any = "",
+) -> Dict[str, Any]:
+    if config.ROUTER_PROVIDER == "groq":
+        return await _classify_groq_async(question, has_documents, document_names, documents)
+    if config.ROUTER_PROVIDER != "jev":
+        return {"route": "unavailable", "direct_answer": "Routing is temporarily unavailable. Please try again.", "status": "error", "reason": "invalid_provider"}
+    from services.jev_service import classify_with_jev
+    return await classify_with_jev(
+        question, has_documents, documents if documents is not None else (document_names or []),
+        conversation_history,
+    )
 
 
 def classify(

@@ -28,47 +28,33 @@ logger = logging.getLogger(__name__)
 # ── 1. Router Node ────────────────────────────────────────────────────────────
 
 async def router_node(state: CRAGState) -> CRAGState:
-    question = state["question"]
-    has_documents = state["has_documents"]
-    doc_profiles = state.get("document_profiles", [])
-    doc_names = state.get("document_names", [])
-
     classification = await classify_async(
-        question=question,
-        has_documents=has_documents,
-        documents=doc_profiles or doc_names,
+        question=state["question"], has_documents=state["has_documents"],
+        documents=state.get("document_profiles") or state.get("document_names", []),
+        conversation_history=state.get("conversation_history", ""),
     )
     route = classification["route"]
-    direct_answer = classification.get("direct_answer", "")
-
-    is_unsafe = route == "unsafe"
-    is_direct = route == "direct_answer"
-
-    if is_direct and not direct_answer:
-        conversation_history = state.get("conversation_history", "")
-        try:
-            direct_res = await asyncio.wait_for(
-                generate_direct_answer_async(
-                    question=question,
-                    conversation_history=conversation_history,
-                ),
-                timeout=config.TIMEOUT_GENERATION,
-            )
-            direct_answer = direct_res.get("answer", "")
-        except Exception as e:
-            logger.warning("Direct answer generation failed: %s", e)
-            direct_answer = "I am Cortex, an AI assistant. How can I help you today?"
-
-    answer = direct_answer if (is_unsafe or is_direct) else state.get("answer", "")
-    source = "guardrail" if is_unsafe else ("llm" if is_direct else state.get("source", ""))
-
+    terminal = route in ("unsafe", "unavailable", "clarify")
     return {
-        **state,
-        "route": route,
-        "answer": answer,
-        "source": source,
-        "is_grounded": True if (is_unsafe or is_direct) else state.get("is_grounded", True),
+        **state, "route": route, "router_decision": classification,
+        "answer": classification.get("direct_answer", "") if terminal else "",
+        "source": "guardrail" if terminal else "",
+        "is_grounded": False if terminal else state.get("is_grounded", False),
     }
+
+
+async def direct_answer_node(state: CRAGState) -> CRAGState:
+    try:
+        result = await asyncio.wait_for(
+            generate_direct_answer_async(
+                question=state["question"], conversation_history=state.get("conversation_history", ""),
+            ), timeout=config.TIMEOUT_GENERATION,
+        )
+        answer = result.get("answer", "")
+    except Exception:
+        logger.warning("Direct generation unavailable")
+        answer = "I could not generate an answer right now. Please try again."
+    return {**state, "answer": answer, "source": "llm", "is_grounded": False}
 
 
 # ── 2. Vector DB Retrieval Node (1st & 2nd Pass) ──────────────────────────────

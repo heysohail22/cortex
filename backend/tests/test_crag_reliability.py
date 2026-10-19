@@ -65,7 +65,7 @@ class TestCRAGRouteAndLoopBounds(unittest.TestCase):
 
     def test_decide_route_direct_answer(self):
         state = _create_test_state(route="direct_answer", answer="Hello!", source="llm")
-        self.assertEqual(decide_route(state), "END")
+        self.assertEqual(decide_route(state), "direct_answer_node")
 
     def test_decide_route_rag_and_web(self):
         rag_state = _create_test_state(route="rag", has_documents=True)
@@ -110,7 +110,7 @@ class TestNodeTimeoutsAndFallbacks(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(res["route"], "unsafe")
         self.assertEqual(res["source"], "guardrail")
         self.assertIn("exploit creation", res["answer"])
-        self.assertTrue(res["is_grounded"])
+        self.assertFalse(res["is_grounded"])
 
     @patch("crag.nodes.vs.similarity_search")
     async def test_retrieve_node_timeout_fallback(self, mock_search):

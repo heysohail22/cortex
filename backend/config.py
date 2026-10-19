@@ -8,7 +8,7 @@ if _env_file.exists():
 else:
     load_dotenv()
 
-# Groq LLMs (Sole LLM Provider for reasoning, generation, routing, and judging)
+# Groq LLMs for generation, evaluation, judging and explicit routing rollback
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 GROQ_REASONING_MODEL = os.getenv("GROQ_REASONING_MODEL", "openai/gpt-oss-120b")
@@ -69,3 +69,14 @@ MAX_HYBRID_WEB_CHARS = int(os.getenv("MAX_HYBRID_WEB_CHARS", "3500"))         # 
 # ── Conversation Memory & Summarization ────────────────────────────────────────
 MAX_CONVERSATION_TOKENS = int(os.getenv("MAX_CONVERSATION_TOKENS", "4000"))  # Token budget for prior context
 MAX_RECENT_MESSAGES = int(os.getenv("MAX_RECENT_MESSAGES", "2"))             # Keep last N messages verbatim
+
+# Jev routing. Set ROUTER_PROVIDER=groq for explicit rollback.
+ROUTER_PROVIDER = os.getenv("ROUTER_PROVIDER", "jev").lower()
+TYPESAFE_API_KEY = os.getenv("TYPESAFE_API_KEY")
+JEV_MODEL = os.getenv("JEV_MODEL", "jev")
+TIMEOUT_JEV = float(os.getenv("TIMEOUT_JEV", "5.0"))
+JEV_MAX_RETRIES = int(os.getenv("JEV_MAX_RETRIES", "0"))
+JEV_SAFETY_THRESHOLD = float(os.getenv("JEV_SAFETY_THRESHOLD", "0.7"))
+JEV_REVIEW_THRESHOLD = float(os.getenv("JEV_REVIEW_THRESHOLD", "0.35"))
+JEV_INTENT_CONFIDENCE = float(os.getenv("JEV_INTENT_CONFIDENCE", "0.6"))
+MAX_CONCURRENT_CHATS = int(os.getenv("MAX_CONCURRENT_CHATS", "8"))

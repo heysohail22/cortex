@@ -95,19 +95,11 @@ _rate_limiter = SlidingWindowRateLimiter()
 
 
 def get_client_identifier(request: Request) -> str:
-    """Extracts client identifier using X-Forwarded-For or client host."""
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        client_ip = forwarded.split(",")[0].strip()
-    else:
-        client_ip = request.client.host if request.client else "127.0.0.1"
+    """Use the ASGI peer, normalized only by a configured trusted proxy server.
 
-    session_id = (
-        request.headers.get("X-Session-ID")
-        or request.query_params.get("session_id")
-        or "global"
-    )
-    return f"{client_ip}:{session_id}"
+    Never trust caller-supplied forwarding headers or session IDs for quotas.
+    """
+    return request.client.host if request.client else "unknown"
 
 
 def rate_limit(limit: int, window_seconds: int = 60) -> Callable:

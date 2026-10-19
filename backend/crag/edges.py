@@ -11,14 +11,16 @@ from crag.state import CRAGState
 logger = logging.getLogger(__name__)
 
 
-def decide_route(state: CRAGState) -> Literal["retrieve_node", "direct_web_search_node", "END"]:
+def decide_route(state: CRAGState) -> Literal["retrieve_node", "direct_web_search_node", "direct_answer_node", "END"]:
     """Routes initial user intent from the Router Node."""
     route = state.get("route", "direct_answer")
     if route == "rag":
         return "retrieve_node"
     if route == "web_search":
         return "direct_web_search_node"
-    # "direct_answer" and "unsafe" terminate immediately since answer was generated directly by Router
+    if route == "direct_answer":
+        return "direct_answer_node"
+    # Safety, clarification and unavailable decisions terminate without generation.
     return "END"
 
 

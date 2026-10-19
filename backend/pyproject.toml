@@ -36,6 +36,7 @@ dependencies = [
     "ragas>=0.2.0",
     "datasets>=2.18.0",
     "pandas>=2.0.0",
+    "typesafe-sdk>=0.7.5",
 ]
 
 [tool.pytest.ini_options]

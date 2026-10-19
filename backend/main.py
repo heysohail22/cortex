@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 import os
 
 import uvicorn
@@ -11,7 +12,17 @@ from api.documents import router as documents_router
 
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        yield
+    finally:
+        from services.jev_service import close_client
+        await close_client()
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Cortex API",
     description="Multi-Agent RAG Application — powered by Groq, Supabase & Tavily",
     version="1.0.0",

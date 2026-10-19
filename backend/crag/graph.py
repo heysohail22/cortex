@@ -21,6 +21,7 @@ def _build_crag_graph() -> Any:
 
     # 1. Add CRAG Core Nodes
     graph.add_node("router", nodes.router_node)
+    graph.add_node("direct_answer_node", nodes.direct_answer_node)
     graph.add_node("retrieve_node", nodes.retrieve_node)
     graph.add_node("retrieval_eval_node", nodes.retrieval_eval_node)
     graph.add_node("web_search_node", nodes.web_search_node)
@@ -38,11 +39,14 @@ def _build_crag_graph() -> Any:
         "router",
         edges.decide_route,
         {
+            "direct_answer_node": "direct_answer_node",
             "retrieve_node": "retrieve_node",
             "direct_web_search_node": "direct_web_search_node",
             "END": END,
         },
     )
+
+    graph.add_edge("direct_answer_node", END)
 
     # Direct Web Search feeds into Context-Budgeted Generator Node
     graph.add_edge("direct_web_search_node", "generate_node")
@@ -164,6 +168,7 @@ async def run_crag_async(
         "source": final_state.get("source", "llm"),
         "citations": final_state.get("citations", []),
         "route": final_state.get("route", "llm"),
+        "router_decision": final_state.get("router_decision", {}),
         "chunks": final_state.get("chunks", []) or final_state.get("refined_chunks", []),
         "web_results": final_state.get("web_results", []),
         "evaluation_result": final_state.get("evaluation_result", ""),

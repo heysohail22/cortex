@@ -24,6 +24,7 @@ from services.conversation_service import (
 )
 
 logger = logging.getLogger(__name__)
+_chat_slots = asyncio.Semaphore(config.MAX_CONCURRENT_CHATS)
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
@@ -81,6 +82,17 @@ class ChatResponse(BaseModel):
     ],
 )
 async def chat(request: ChatRequest):
+    try:
+        await asyncio.wait_for(_chat_slots.acquire(), timeout=0.05)
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=503, detail="Server is busy. Please retry shortly.", headers={"Retry-After": "1"})
+    try:
+        return await _chat_impl(request)
+    finally:
+        _chat_slots.release()
+
+
+async def _chat_impl(request: ChatRequest):
     try:
         # ── Layer 1 Guardrail: Prompt Injection & Jailbreak Defense ───────────
         guard_res = await check_prompt_async(request.message)

@@ -8,6 +8,7 @@ from typing_extensions import TypedDict
 
 
 class CRAGState(TypedDict):
+    router_decision: Dict[str, Any]
     question: str
     conversation_history: Any           # Prior dialogue context for answer generation (native turns or str)
     session_id: str
