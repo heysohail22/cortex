@@ -263,3 +263,16 @@ async def test_empty_web_results_return_unverified_limitation_without_model_call
     judge.assert_not_awaited()
     assert state["verification_status"] == "SKIPPED" and state["is_grounded"] is None
     assert state["answer"] and not state["citations"]
+
+
+async def test_generation_rate_limit_is_reported_as_provider_capacity_not_verification_failure():
+    error = RuntimeError('rate limited')
+    error.status_code = 429
+    snapshot, _ = build_snapshot([DOC], [])
+    with patch('services.generation.generate_structured', AsyncMock(side_effect=error)):
+        result = await generate_answer_async('q', snapshot, source='rag')
+    assert result.status == 'ERROR' and result.error_kind == 'rate_limited'
+    state = await vn.safe_fallback_node({'generation_result': result.model_dump(), 'verification_status': 'UNKNOWN'})
+    assert 'rate-limited' in state['answer']
+    assert state['route'] == 'answer_unavailable'
+    assert state['is_grounded'] is None

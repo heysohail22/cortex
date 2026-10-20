@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from typing import Dict, List
+from typing import Any, Dict, List
 from tavily import TavilyClient
 import config
 

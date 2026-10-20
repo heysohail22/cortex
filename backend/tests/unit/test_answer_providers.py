@@ -57,3 +57,23 @@ def test_provider_clients_disable_hidden_retries():
     with patch.object(gemini, "_client", None), patch("config.GEMINI_API_KEY", "dummy"), patch("config.ANSWER_PROVIDER_RETRIES", 0), patch("providers.gemini.genai.Client") as constructor:
         gemini.get_answer_client()
         assert constructor.call_args.kwargs["http_options"].retry_options.attempts == 1
+
+
+@pytest.mark.parametrize('code,repairable', [('json_validate_failed', True), ('invalid_api_key', False)])
+async def test_groq_rejected_json_is_repairable_but_credentials_are_not(code, repairable):
+    error = RuntimeError('provider failure')
+    error.status_code = 400
+    error.body = {'error': {'code': code}}
+    client = NS(chat=NS(completions=NS(create=AsyncMock(side_effect=error))))
+    with patch.object(groq, 'get_answer_client', return_value=client):
+        with pytest.raises(InvalidProviderOutput if repairable else RuntimeError):
+            await groq.generate_structured(**ARGS)
+
+
+async def test_gpt_oss_uses_low_reasoning_by_default_and_preserves_override():
+    create = AsyncMock(return_value=NS(choices=[NS(finish_reason='stop', message=NS(content='{}'))], model='m', usage=None))
+    with patch.object(groq, 'get_answer_client', return_value=NS(chat=NS(completions=NS(create=create)))):
+        await groq.generate_structured(**{**ARGS, 'model': 'openai/gpt-oss-120b'})
+        assert create.call_args.kwargs['reasoning_effort'] == 'low'
+        await groq.generate_structured(**{**ARGS, 'model': 'openai/gpt-oss-120b', 'reasoning': 'high'})
+        assert create.call_args.kwargs['reasoning_effort'] == 'high'

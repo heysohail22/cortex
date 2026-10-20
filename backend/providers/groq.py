@@ -34,14 +34,26 @@ async def generate_structured(*, model: str, system: str, payload: dict, schema:
                               reasoning: str | None = None):
     import json
     from providers.structured import StructuredResponse, InvalidProviderOutput
-    options = {"reasoning_effort": reasoning} if reasoning else {}
-    result = await get_answer_client().chat.completions.create(
-        model=model, messages=[{"role": "system", "content": system},
-                               {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}],
-        response_format={"type": "json_schema", "json_schema": {
-            "name": "cortex_response", "strict": True, "schema": schema}},
-        temperature=temperature, max_completion_tokens=max_tokens, timeout=timeout, **options,
-    )
+    # GPT-OSS reasoning shares the completion budget with the required JSON.
+    effective_reasoning = reasoning or ("low" if model.startswith("openai/gpt-oss-") else None)
+    options = {"reasoning_effort": effective_reasoning} if effective_reasoning else {}
+    try:
+        result = await get_answer_client().chat.completions.create(
+            model=model, messages=[{"role": "system", "content": system},
+                                   {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}],
+            response_format={"type": "json_schema", "json_schema": {
+                "name": "cortex_response", "strict": True, "schema": schema}},
+            temperature=temperature, max_completion_tokens=max_tokens, timeout=timeout, **options,
+        )
+    except Exception as exc:
+        # Groq can reject generated JSON before returning a completion. Treat only
+        # this documented output failure as repairable; auth/quota errors stay errors.
+        body = getattr(exc, "body", None)
+        error = body.get("error", body) if isinstance(body, dict) else {}
+        if (getattr(exc, "status_code", None) == 400
+                and isinstance(error, dict) and error.get("code") == "json_validate_failed"):
+            raise InvalidProviderOutput("Provider rejected structured output", model=model) from exc
+        raise
     try:
         if not result.choices or result.choices[0].finish_reason != "stop":
             raise ValueError("Incomplete response")

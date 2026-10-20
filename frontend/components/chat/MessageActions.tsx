@@ -198,7 +198,7 @@ export function MessageActions({
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#121824] border border-red-500/25 hover:border-red-500/50 text-[11px] text-red-400 font-medium transition-colors cursor-pointer"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-              <span>Safety Guardrail</span>
+              <span>{route === "hallucination_fallback" ? "Answer not supported" : route === "clarify" ? "Clarification needed" : route === "unavailable" || route === "answer_unavailable" ? "Temporarily unavailable" : "Safety Guardrail"}</span>
             </button>
           )}
         </div>
