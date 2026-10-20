@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { conversationHref } from "@/lib/chat-sessions";
 import { MessageSquare, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,8 +58,20 @@ export function ConversationItem({
             : "text-muted-foreground hover:bg-accent/50",
         )}
       >
-        <button
-          onClick={() => onSelect(chat.id)}
+        <Link
+          href={conversationHref(chat.id)}
+          prefetch={false}
+          onClick={(event) => {
+            if (
+              event.metaKey ||
+              event.ctrlKey ||
+              event.shiftKey ||
+              event.altKey
+            )
+              return;
+            event.preventDefault();
+            onSelect(chat.id);
+          }}
           aria-current={isActive ? "page" : undefined}
           className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 py-2 text-left text-xs"
         >
@@ -65,7 +79,7 @@ export function ConversationItem({
             className={cn("size-3.5 shrink-0", isActive && "text-primary")}
           />
           <span className="truncate">{chat.title}</span>
-        </button>
+        </Link>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button

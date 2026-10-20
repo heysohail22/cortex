@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cortex frontend
 
-## Getting Started
+Next.js App Router workspace with React 19, Tailwind CSS, and local shadcn/ui components.
 
-First, run the development server:
+## Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000. Set `NEXT_PUBLIC_API_URL` in `.env.local` to your FastAPI server (defaults to `http://localhost:8000`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Pages and conversation URLs
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `/` — a new conversation. Sending the first message creates a session and navigates to its URL.
+- `/c/[chatId]` — a specific saved conversation. The URL uses the same session ID sent to the chat API. Sidebar links, refresh, and browser back/forward select the conversation from this route.
+- `/library` — the document knowledge base.
 
-## Learn More
+`app/(workspace)/layout.tsx` keeps the workspace mounted across these pages. `components/workspace/Workspace.tsx` owns sessions, per-chat drafts, document state, and requests so navigating between conversations does not discard a pending answer. Missing IDs show a recovery screen; they never silently create a replacement chat. A URL identifies a conversation in the existing browser/backend history; it does not grant sharing access.
 
-To learn more about Next.js, take a look at the following resources:
+`components/chat/ChatComposer.tsx` implements the expanding message input, attachment button, Enter/Shift+Enter behavior, character limit, and stop control. Stop cancels the frontend request; server-side processing may already be underway.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Checks
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+pnpm lint
+pnpm test
+pnpm exec tsc --noEmit
+pnpm build
+```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The Node test suite checks saved-session restoration, chat URLs, stale history merges, interrupted responses, and deleted-session races. Use a browser to check route navigation, direct reloads, mobile layout, and the composer against a running backend.
