@@ -31,7 +31,7 @@ async def close_answer_client() -> None:
 
 
 async def generate_structured(*, model: str, system: str, payload: dict, schema: dict,
-                              temperature: float, max_tokens: int, timeout: float,
+                              temperature: float, max_tokens: int,
                               reasoning: str | None = None):
     thinking = types.ThinkingConfig(thinking_level=reasoning) if reasoning else None
     response = await get_answer_client().models.generate_content(
@@ -39,7 +39,7 @@ async def generate_structured(*, model: str, system: str, payload: dict, schema:
         config=types.GenerateContentConfig(
             system_instruction=system, temperature=temperature, max_output_tokens=max_tokens,
             response_mime_type="application/json", response_json_schema=schema,
-            thinking_config=thinking, http_options=types.HttpOptions(timeout=max(1, int(timeout * 1000))),
+            thinking_config=thinking,
         ),
     )
     try:

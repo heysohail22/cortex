@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from api.schemas.chat import ChatRequest, DeleteSessionResponse, ChunkInfo, WebResultInfo, ChatResponse
 
 import config
@@ -11,7 +11,6 @@ from workflows.crag import run_crag_async
 from guardrails import (
     check_prompt_async,
     process_output,
-    rate_limit,
     redact_pii_async,
 )
 from repositories import storage as storage_service, documents as vs
@@ -31,20 +30,9 @@ router = APIRouter(prefix="/api", tags=["chat"])
 @router.post(
     "/chat",
     response_model=ChatResponse,
-    dependencies=[
-        Depends(
-            rate_limit(
-                config.RATE_LIMIT_CHAT_REQUESTS,
-                config.RATE_LIMIT_CHAT_WINDOW,
-            )
-        )
-    ],
 )
 async def chat(request: ChatRequest):
-    try:
-        await asyncio.wait_for(_chat_slots.acquire(), timeout=0.05)
-    except asyncio.TimeoutError:
-        raise HTTPException(status_code=503, detail="Server is busy. Please retry shortly.", headers={"Retry-After": "1"})
+    await _chat_slots.acquire()
     try:
         return await _chat_impl(request)
     finally:

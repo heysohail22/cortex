@@ -1,3 +1,9 @@
+"""Backend configuration shared by local and deployed environments.
+
+Credentials come from the environment. External providers enforce their own service limits.
+"""
+from __future__ import annotations
+
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -31,18 +37,9 @@ TOP_K_RESULTS = 5
 SIMILARITY_THRESHOLD = 0.3
 
 # ── Layer 1: Frontline Guardrails Configuration ──────────────────────────────
-# Rate Limiting & Throttling (increased ceiling to prevent benchmark bottlenecks)
-ENABLE_RATE_LIMITING = os.getenv("ENABLE_RATE_LIMITING", "true").lower() in ("true", "1")
-RATE_LIMIT_CHAT_REQUESTS = int(os.getenv("RATE_LIMIT_CHAT_REQUESTS", "100"))
-RATE_LIMIT_CHAT_WINDOW = int(os.getenv("RATE_LIMIT_CHAT_WINDOW", "60"))
-RATE_LIMIT_UPLOAD_REQUESTS = int(os.getenv("RATE_LIMIT_UPLOAD_REQUESTS", "10"))
-RATE_LIMIT_UPLOAD_WINDOW = int(os.getenv("RATE_LIMIT_UPLOAD_WINDOW", "60"))
 
 # Prompt Injection & Jailbreak Defense
 ENABLE_PROMPT_GUARD = os.getenv("ENABLE_PROMPT_GUARD", "true").lower() in ("true", "1")
-USE_LOCAL_PROMPT_GUARD_MODEL = os.getenv("USE_LOCAL_PROMPT_GUARD_MODEL", "false").lower() in ("true", "1")
-PROMPT_GUARD_MODEL = os.getenv("PROMPT_GUARD_MODEL", "meta-llama/Prompt-Guard-86M")
-PROMPT_GUARD_THRESHOLD = float(os.getenv("PROMPT_GUARD_THRESHOLD", "0.6"))
 
 # PII & Sensitive Data Redaction
 ENABLE_PII_REDACTION = os.getenv("ENABLE_PII_REDACTION", "true").lower() in ("true", "1")
@@ -51,13 +48,6 @@ ENABLE_PRESIDIO_NER = os.getenv("ENABLE_PRESIDIO_NER", "false").lower() in ("tru
 # Document Ingestion Security
 ENABLE_INGESTION_GUARD = os.getenv("ENABLE_INGESTION_GUARD", "true").lower() in ("true", "1")
 
-# ── Per-Node Execution Timeouts (Seconds) ────────────────────────────────────
-TIMEOUT_ROUTER = float(os.getenv("TIMEOUT_ROUTER", "15.0"))
-TIMEOUT_RETRIEVAL = float(os.getenv("TIMEOUT_RETRIEVAL", "4.0"))
-TIMEOUT_RETRIEVAL_EVAL = float(os.getenv("TIMEOUT_RETRIEVAL_EVAL", "5.0"))
-TIMEOUT_WEB_SEARCH = float(os.getenv("TIMEOUT_WEB_SEARCH", "5.0"))
-TIMEOUT_GENERATION = float(os.getenv("TIMEOUT_GENERATION", "12.0"))
-TIMEOUT_GROUNDEDNESS = float(os.getenv("TIMEOUT_GROUNDEDNESS", "5.0"))
 
 # ── Context Token Budget & Length Ceilings (Characters) ──────────────────────
 MAX_DOC_CONTEXT_CHARS = int(os.getenv("MAX_DOC_CONTEXT_CHARS", "10000"))      # ~2,500 tokens
@@ -70,11 +60,10 @@ MAX_HYBRID_WEB_CHARS = int(os.getenv("MAX_HYBRID_WEB_CHARS", "3500"))         # 
 MAX_CONVERSATION_TOKENS = int(os.getenv("MAX_CONVERSATION_TOKENS", "4000"))  # Token budget for prior context
 MAX_RECENT_MESSAGES = int(os.getenv("MAX_RECENT_MESSAGES", "2"))             # Keep last N messages verbatim
 
-# Jev routing. Set ROUTER_PROVIDER=groq for explicit rollback.
-ROUTER_PROVIDER = os.getenv("ROUTER_PROVIDER", "jev").lower()
+# Jev routing is fixed for this application. Credentials remain environment-specific.
+ROUTER_PROVIDER = "jev"
+JEV_MODEL = "jev-latest"
 TYPESAFE_API_KEY = os.getenv("TYPESAFE_API_KEY")
-JEV_MODEL = os.getenv("JEV_MODEL", "jev-latest")
-TIMEOUT_JEV = float(os.getenv("TIMEOUT_JEV", "5.0"))
 JEV_MAX_RETRIES = int(os.getenv("JEV_MAX_RETRIES", "0"))
 JEV_SAFETY_THRESHOLD = float(os.getenv("JEV_SAFETY_THRESHOLD", "0.7"))
 JEV_REVIEW_THRESHOLD = float(os.getenv("JEV_REVIEW_THRESHOLD", "0.35"))
@@ -82,8 +71,6 @@ JEV_INTENT_CONFIDENCE = float(os.getenv("JEV_INTENT_CONFIDENCE", "0.6"))
 MAX_CONCURRENT_CHATS = int(os.getenv("MAX_CONCURRENT_CHATS", "8"))
 
 # Retrieval correction: one attempt is enforced in graph code.
-TIMEOUT_RETRIEVAL_STAGE = float(os.getenv("TIMEOUT_RETRIEVAL_STAGE", "25"))
-TIMEOUT_RETRIEVAL_REWRITE = float(os.getenv("TIMEOUT_RETRIEVAL_REWRITE", "4"))
 MAX_EVIDENCE_CONTEXT_CHARS = int(os.getenv("MAX_EVIDENCE_CONTEXT_CHARS", "8000"))
 MAX_EVIDENCE_PASSAGE_CHARS = int(os.getenv("MAX_EVIDENCE_PASSAGE_CHARS", "2000"))
 MAX_EVIDENCE_CANDIDATES = int(os.getenv("MAX_EVIDENCE_CANDIDATES", "10"))
@@ -103,4 +90,3 @@ MAX_VERIFICATION_OUTPUT_TOKENS = int(os.getenv("MAX_VERIFICATION_OUTPUT_TOKENS",
 MAX_ANSWER_CHARS = int(os.getenv("MAX_ANSWER_CHARS", "8000"))
 MAX_ANSWER_CLAIMS = int(os.getenv("MAX_ANSWER_CLAIMS", "24"))
 MAX_GENERATION_CONTEXT_CHARS = int(os.getenv("MAX_GENERATION_CONTEXT_CHARS", "12000"))
-TIMEOUT_ANSWER_STAGE = float(os.getenv("TIMEOUT_ANSWER_STAGE", "35"))

@@ -68,7 +68,7 @@ async def assess_evidence_with_jev(
         response = await evaluate_questions(
             state={"question": question[:4000], "conversation": _history(conversation_history),
                    "passages": [{"id": c["evidence_id"], "source": c["source"][:200], "text": c["text"]} for c in candidates]},
-            questions=questions, timeout=config.TIMEOUT_RETRIEVAL_EVAL,
+            questions=questions,
         )
         expected_choices = {"coverage", *(f"role_{cid}" for cid in ids)}
         if set(response.choices) != expected_choices or set(response.nouls) != {f"injection_{cid}" for cid in ids}:

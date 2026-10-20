@@ -42,10 +42,9 @@ MAX_VERIFICATION_OUTPUT_TOKENS=1800
 MAX_ANSWER_CHARS=8000
 MAX_ANSWER_CLAIMS=24
 MAX_GENERATION_CONTEXT_CHARS=12000
-TIMEOUT_ANSWER_STAGE=35
 ```
 
-The existing TIMEOUT_GENERATION and TIMEOUT_GROUNDEDNESS values also bound individual calls. All SDK retries and the single repair must fit inside the overall answer-stage deadline. Provider reasoning settings are omitted by default; set only values supported by the selected model. Output limits include provider-specific reasoning overhead where the provider charges/counts it that way. Tune with measured complete response time rather than throughput alone.
+Application stage deadlines and operation timeouts have been removed. The single repair allowance remains. Provider reasoning settings are omitted by default; set only values supported by the selected model. Output limits include provider-specific reasoning overhead where the provider charges/counts it that way. Tune with measured complete response time rather than throughput alone.
 
 The optional Gemini generator uses the existing server-side GEMINI_API_KEY. Set both provider and model explicitly:
 

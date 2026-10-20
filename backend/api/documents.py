@@ -4,11 +4,11 @@ import asyncio
 import logging
 import os
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from api.schemas.documents import UploadResponse, DocumentItem, DocumentListResponse, DeleteResponse, DocumentUrlResponse
 
 import config
-from guardrails import rate_limit, validate_file_magic
+from guardrails import validate_file_magic
 from retrieval.ingestion import indexing as document_processor
 from repositories import storage as storage_service, documents as vs
 
@@ -23,14 +23,6 @@ MAX_FILE_SIZE_MB = 20
 @router.post(
     "/documents/upload",
     response_model=UploadResponse,
-    dependencies=[
-        Depends(
-            rate_limit(
-                config.RATE_LIMIT_UPLOAD_REQUESTS,
-                config.RATE_LIMIT_UPLOAD_WINDOW,
-            )
-        )
-    ],
 )
 async def upload_document(
     file: UploadFile = File(...),

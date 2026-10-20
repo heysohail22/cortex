@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import Any, List
 from pydantic import BaseModel, Field
@@ -95,10 +94,7 @@ async def rewrite_retrieval_query_async(
                                         "conversation": _history(conversation_history)})),
     ]
     try:
-        return await asyncio.wait_for(
-            _groq_query_base.with_structured_output(RetrievalRewrite).ainvoke(messages),
-            timeout=config.TIMEOUT_RETRIEVAL_REWRITE,
-        )
+        return await _groq_query_base.with_structured_output(RetrievalRewrite).ainvoke(messages)
     except Exception:
         logger.warning("Targeted retrieval rewrite unavailable")
         return RetrievalRewrite()

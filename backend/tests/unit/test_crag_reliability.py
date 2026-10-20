@@ -86,11 +86,11 @@ class TestCRAGRouteAndLoopBounds(unittest.TestCase):
         self.assertEqual(decide_after_groundedness(state_grounded), "END")
 
         # 1st hallucination (retry_count = 0) -> Route to Strict Constrained Generator
-        state_ungrounded_1 = _create_test_state(verification_status="UNSUPPORTED", answer_repairs_used=0, answer_deadline=time.monotonic()+10)
+        state_ungrounded_1 = _create_test_state(verification_status="UNSUPPORTED", answer_repairs_used=0)
         self.assertEqual(decide_after_groundedness(state_ungrounded_1), "strict_retry_node")
 
         # 2nd hallucination (retry_count >= 1) -> Bound enforced, forward to Safe Fallback
-        state_ungrounded_2 = _create_test_state(verification_status="UNSUPPORTED", answer_repairs_used=1, answer_deadline=time.monotonic()+10)
+        state_ungrounded_2 = _create_test_state(verification_status="UNSUPPORTED", answer_repairs_used=1)
         self.assertEqual(decide_after_groundedness(state_ungrounded_2), "safe_fallback_node")
 
 
@@ -109,59 +109,8 @@ class TestNodeTimeoutsAndFallbacks(unittest.IsolatedAsyncioTestCase):
         self.assertIn("exploit creation", res["answer"])
         self.assertIsNone(res["is_grounded"])
 
-    @patch("workflows.crag.nodes.retrieval.vs.similarity_search")
-    async def test_retrieve_node_timeout_fallback(self, mock_search):
-        # Simulate retrieval timeout
-        def _slow_search(*args, **kwargs):
-            import time
-            time.sleep(4.0)
-            return [{"text": "doc"}]
 
-        mock_search.side_effect = _slow_search
-        state = _create_test_state(question="test question")
 
-        # Set temporary 0.1s timeout to test fast recovery
-        with patch("config.TIMEOUT_RETRIEVAL", 0.1):
-            res = await retrieve_node(state)
-            self.assertEqual(res["chunks"], [])
-            self.assertEqual(res["retrieval_status"], "error")
-            self.assertEqual(res["evidence_status"], "UNKNOWN")
-
-    @patch("workflows.crag.nodes.web.search_web_async")
-    async def test_web_search_node_timeout_fallback(self, mock_web):
-        async def _slow_web(*args, **kwargs):
-            await asyncio.sleep(4.0)
-            return [{"title": "res"}]
-
-        mock_web.side_effect = _slow_web
-        state = _create_test_state(question="test web question")
-
-        with patch("config.TIMEOUT_WEB_SEARCH", 0.1):
-            res = await web_search_node(state)
-            self.assertEqual(res["web_results"], [])
-
-    @patch("workflows.crag.nodes.verification.verify_answer_async")
-    async def test_groundedness_node_timeout_fallback(self, mock_eval):
-        async def _slow_eval(*args, **kwargs):
-            await asyncio.sleep(4.0)
-            return False, "hallucinated"
-
-        mock_eval.side_effect = _slow_eval
-        state = _create_test_state(
-            question="q",
-            answer="a",
-            source="rag",
-            chunks=[{"text": "doc content"}],
-            is_grounded=None,
-            generation_result={"status": "SUCCESS", "source": "rag", "answer": "a"},
-            answer_deadline=time.monotonic()+10,
-        )
-
-        with patch("config.TIMEOUT_GROUNDEDNESS", 0.1):
-            res = await groundedness_check_node(state)
-            self.assertIsNone(res["is_grounded"])
-            self.assertEqual(res["verification_status"], "UNKNOWN")
-            self.assertEqual(res["answer"], "")
 
 
     async def test_safe_fallback_node(self):

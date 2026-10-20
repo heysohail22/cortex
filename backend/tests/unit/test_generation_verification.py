@@ -200,11 +200,6 @@ async def test_unknown_judge_stops_without_repair_or_draft():
     assert "20 annual" not in final["answer"]
 
 
-async def test_exhausted_stage_deadline_prevents_provider_calls():
-    with patch.object(gn, "generate_answer_async", AsyncMock()) as generate:
-        result = await gn.generate_node({"question": "q", "route": "rag", "chunks": [DOC], "answer_deadline": time.monotonic() - 1})
-    generate.assert_not_awaited()
-    assert result["generation_status"] == "TIMEOUT"
 
 
 async def test_generation_context_truncation_discloses_partial():
@@ -228,13 +223,6 @@ async def test_web_answer_is_verified_not_skipped():
     assert result["verification_status"] == "SUPPORTED"
 
 
-async def test_judge_node_enforces_operation_timeout():
-    result, snapshot = await generated()
-    async def slow(*args, **kwargs):
-        await asyncio.sleep(1)
-    with patch("config.TIMEOUT_GROUNDEDNESS", 0.01), patch.object(vn, "verify_answer_async", side_effect=slow):
-        final = await vn.groundedness_check_node({"question": "q", "generation_result": result.model_dump(), "generation_snapshot": [p.model_dump() for p in snapshot], "answer_deadline": time.monotonic()+10})
-    assert final["verification_status"] == "UNKNOWN" and not final["answer"]
 
 
 def test_comparison_cost_includes_thinking_and_does_not_assume_missing_usage_is_free():

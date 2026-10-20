@@ -8,15 +8,11 @@ import unittest
 
 from fastapi.testclient import TestClient
 from main import app
-from guardrails.rate_limiter import _rate_limiter
 
 
 class TestAPIGuardrails(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)
-        # Reset limiter state before each test
-        import asyncio
-        asyncio.run(_rate_limiter.reset())
 
     def test_health_check(self):
         response = self.client.get("/api/health")

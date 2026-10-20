@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+
 from langchain_groq import ChatGroq
 import config
 
 
 def get_model(model: str, temperature: float) -> ChatGroq:
     """Construct an SDK model; consuming services retain their existing singleton lifecycle."""
-    return ChatGroq(model=model, api_key=config.GROQ_API_KEY, temperature=temperature)
+    return ChatGroq(model=model, api_key=config.GROQ_API_KEY, temperature=temperature, timeout=None)
 
 
 _answer_client = None
@@ -30,7 +31,7 @@ async def close_answer_client() -> None:
 
 
 async def generate_structured(*, model: str, system: str, payload: dict, schema: dict,
-                              temperature: float, max_tokens: int, timeout: float,
+                              temperature: float, max_tokens: int,
                               reasoning: str | None = None):
     import json
     from providers.structured import StructuredResponse, InvalidProviderOutput
@@ -43,7 +44,7 @@ async def generate_structured(*, model: str, system: str, payload: dict, schema:
                                    {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}],
             response_format={"type": "json_schema", "json_schema": {
                 "name": "cortex_response", "strict": True, "schema": schema}},
-            temperature=temperature, max_completion_tokens=max_tokens, timeout=timeout, **options,
+            temperature=temperature, max_completion_tokens=max_tokens, timeout=None, **options,
         )
     except Exception as exc:
         # Groq can reject generated JSON before returning a completion. Treat only

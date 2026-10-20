@@ -11,7 +11,7 @@ Phase 2 replaces the Groq retrieval classifier with Jev. Query rewriting remains
 5. The rewriter can request clarification or supply a query targeting missing requirements. Empty, equivalent or failed rewrites skip duplicate retrieval.
 6. Reassess the retained/new union once. Generate a supported partial answer, return a deterministic no-evidence response, or use explicitly permitted public supplementation.
 
-`retrieval_corrections_used` starts at zero and increments only when scheduling correction retrieval. It never exceeds one. `db_retry_count` is maintained as a compatibility mirror. Initial retrieval is not a correction. A single retrieval-stage deadline bounds retrieval, assessment, rewriting and any optional public supplementation; each operation also has its own timeout.
+`retrieval_corrections_used` starts at zero and increments only when scheduling correction retrieval. It never exceeds one. `db_retry_count` is maintained as a compatibility mirror. Initial retrieval is not a correction. Retrieval operations run without application timeouts; the correction count remains bounded.
 
 ## Decisions and safety
 
@@ -27,14 +27,12 @@ Only assessed text reaches generation: truncated tails are not restored afterwar
 
 The existing TYPESAFE_API_KEY and JEV_MODEL settings are reused. New settings in .env.example:
 
-- TIMEOUT_RETRIEVAL_STAGE: total stage budget, default 25 seconds.
-- TIMEOUT_RETRIEVAL_REWRITE: per-rewrite limit, default 4 seconds.
 - MAX_EVIDENCE_CONTEXT_CHARS: candidate context ceiling, default 8000 characters, further limited by generation budgets.
 - MAX_EVIDENCE_PASSAGE_CHARS: per-passage ceiling, default 2000 characters.
 - MAX_EVIDENCE_CANDIDATES: candidate count ceiling, default 10.
 - JEV_EVIDENCE_INJECTION_MAX: exclude at or above this score, default 0.35. This is an initial policy value requiring calibration.
 
-SDK retry settings remain bounded by the outer operation timeout.
+SDK retry counts remain bounded; there is no application deadline.
 
 ## Public supplementation
 
@@ -42,12 +40,12 @@ Document-only is the default. There is no automatic web fallback for weak docume
 
 Trusted server callers can pass external_evidence_policy="public_supplement" and an independently approved approved_public_query to run_crag_async. The public chat request does not accept these fields. The caller must approve a query without private identifiers or private document facts; the application cannot determine every confidential identifier automatically. The query is additionally redacted before search. Neither private passages nor conversation history are used to construct the external query.
 
-At most one public search runs. Its snippets are assessed before use and excluded snippets are not passed to generation. Public results cannot establish missing private policy facts. Hybrid generation receives distinct document and web context. Web failure falls back to retained partial evidence or a limitation response. Assessment failures and exhausted stage deadlines return temporary unavailable responses.
+At most one public search runs. Its snippets are assessed before use and excluded snippets are not passed to generation. Public results cannot establish missing private policy facts. Hybrid generation receives distinct document and web context. Web failure falls back to retained partial evidence or a limitation response. Assessment failures return temporary unavailable responses.
 
 The subsequent generation phase verifies document, web and hybrid answers against the exact generation snapshot. Failed verification is UNKNOWN rather than approved; unsupported drafts can be repaired once. See [generation and verification](generation_verification.md).
 
 ## Validation and limits
 
-Run `.venv/bin/python -m pytest tests/ -q` from backend. The phase adds provider-contract, graph-bound, partial-evidence retention, deadline, public-policy and API-output regression tests using mocks.
+Run `.venv/bin/python -m pytest tests/ -q` from backend. The phase adds provider-contract, graph-bound, partial-evidence retention, public-policy and API-output regression tests using mocks.
 
 Live Jev quality, model availability, token cost and latency require configured credentials and a labelled comparison dataset. Mock tests establish orchestration behavior, not detection accuracy or a speed improvement. Supabase retrieval still uses the existing scoped RPC; no authorization model was added or changed.

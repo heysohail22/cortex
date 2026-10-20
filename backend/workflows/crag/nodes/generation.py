@@ -1,18 +1,12 @@
 """Generate one candidate; repairs share a single request-level allowance."""
 from __future__ import annotations
 
-import time
 import asyncio
 
-import config
 from guardrails.output import scrub_output
 from services.answer_contracts import EvidencePassage, GenerationResult
 from services.generation import build_snapshot, generate_answer_async
 from workflows.crag.state import CRAGState
-
-
-def remaining_time(state: CRAGState, operation_limit: float) -> float:
-    return min(operation_limit, max(0.0, state["answer_deadline"] - time.monotonic()))
 
 
 def operational_response(state: CRAGState, message: str, status: str = "UNKNOWN") -> CRAGState:
@@ -22,17 +16,12 @@ def operational_response(state: CRAGState, message: str, status: str = "UNKNOWN"
 
 
 async def direct_answer_node(state: CRAGState) -> CRAGState:
-    state = {**state, "answer_deadline": time.monotonic() + config.TIMEOUT_ANSWER_STAGE}
-    limit = remaining_time(state, config.TIMEOUT_GENERATION)
     request_started = False
     try:
-        if limit <= 0:
-            raise TimeoutError()
         request_started = True
-        result = await asyncio.wait_for(generate_answer_async(
+        result = await generate_answer_async(
             state["question"], [], source="llm", conversation_history=state.get("conversation_history", ""),
-            timeout=limit,
-        ), timeout=limit)
+        )
     except (TimeoutError, asyncio.TimeoutError):
         result = GenerationResult(status="TIMEOUT", error_kind="timeout", source="llm", request_made=request_started)
     except Exception:
@@ -47,7 +36,6 @@ async def direct_answer_node(state: CRAGState) -> CRAGState:
 
 
 async def generate_node(state: CRAGState) -> CRAGState:
-    state = {**state, "answer_deadline": state.get("answer_deadline") or time.monotonic() + config.TIMEOUT_ANSWER_STAGE}
     chunks, web = state.get("chunks", []), state.get("web_results", [])
     source = "hybrid" if chunks and web else "web_search" if web or state.get("route") == "web_search" else "rag"
     request_started = False
@@ -62,17 +50,13 @@ async def generate_node(state: CRAGState) -> CRAGState:
                 state["missing_requirements"] = (state.get("missing_requirements", "") + " Some evidence was omitted by the generation context budget.")[:1000]
             state["snapshot_truncated"] = truncated
         prior = GenerationResult.model_validate(state["generation_result"]) if state.get("generation_result") else None
-        limit = remaining_time(state, config.TIMEOUT_GENERATION)
-        if limit <= 0:
-            raise TimeoutError()
         request_started = True
-        result = await asyncio.wait_for(generate_answer_async(
+        result = await generate_answer_async(
             state["question"], snapshot, source=source, evidence_status=state.get("evidence_status") or None,
             missing_requirements=state.get("missing_requirements", ""), conflicting_ids=state.get("conflicting_ids", []),
             conversation_history=state.get("conversation_history", ""),
             previous_draft=prior.answer if prior else "", feedback=state.get("repair_feedback"),
-            timeout=limit,
-        ), timeout=limit)
+        )
     except (TimeoutError, asyncio.TimeoutError):
         result = GenerationResult(status="TIMEOUT", error_kind="timeout", source=source, request_made=request_started)
     except Exception:

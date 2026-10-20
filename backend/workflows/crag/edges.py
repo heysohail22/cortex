@@ -51,11 +51,9 @@ def decide_after_groundedness(
     state: CRAGState
 ) -> Literal["strict_retry_node", "safe_fallback_node", "END"]:
     """Only a failed support check can use the single answer repair allowance."""
-    import time
     status = state.get("verification_status", "UNKNOWN")
     if status in ("SUPPORTED", "SKIPPED"):
         return "END"
-    if (status == "UNSUPPORTED" and state.get("answer_repairs_used", 0) < 1
-            and time.monotonic() < state.get("answer_deadline", 0)):
+    if status == "UNSUPPORTED" and state.get("answer_repairs_used", 0) < 1:
         return "strict_retry_node"
     return "safe_fallback_node"

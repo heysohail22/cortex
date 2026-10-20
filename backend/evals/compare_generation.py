@@ -59,7 +59,7 @@ async def compare(cases: list[dict], candidates: list[str], rates: dict) -> list
                          "evidence_status": "PARTIAL" if truncated else case.get("evidence_status"),
                          "generation_snapshot": [p.model_dump() for p in snapshot], "snapshot_truncated": truncated,
                          "missing_requirements": "Evidence was budget-limited." if truncated else "",
-                         "answer_repairs_used": 0, "answer_deadline": time.monotonic()+config.TIMEOUT_ANSWER_STAGE}
+                         "answer_repairs_used": 0}
                 start = time.monotonic()
                 if case["source"] == "llm":
                     state = await direct_answer_node(state)

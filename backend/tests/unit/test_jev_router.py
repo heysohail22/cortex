@@ -9,7 +9,6 @@ from services.answer_contracts import GenerationResult
 from services.routing import classify_with_jev
 from workflows.crag.nodes import router_node, direct_answer_node
 from workflows.crag.graph import _build_crag_graph
-from guardrails.rate_limiter import get_client_identifier
 from starlette.requests import Request
 
 
@@ -76,9 +75,6 @@ async def test_graph_direct_and_blocked_paths():
         assert generate.await_count == (1 if route == "direct_answer" else 0)
 
 
-def test_quota_identity_cannot_be_rotated_by_headers():
-    req = Request({"type": "http", "client": ("192.0.2.1", 1234), "headers": [(b"x-forwarded-for", b"fake"), (b"x-session-id", b"rotated")], "query_string": b"session_id=other"})
-    assert get_client_identifier(req) == "192.0.2.1"
 
 
 async def test_explicit_provider_rollback():
@@ -88,7 +84,7 @@ async def test_explicit_provider_rollback():
     legacy.assert_awaited_once()
 
 
-async def test_chat_capacity_is_released_and_overload_is_controlled():
+async def test_chat_capacity_is_released_and_busy_requests_wait():
     import asyncio
     from api import chat as module
     from fastapi import HTTPException
@@ -99,21 +95,12 @@ async def test_chat_capacity_is_released_and_overload_is_controlled():
             await module.chat(request)
         assert not slots.locked()
         await slots.acquire()
-        with pytest.raises(HTTPException) as exc:
-            await module.chat(request)
-        assert exc.value.status_code == 503
-        assert exc.value.headers["Retry-After"] == "1"
+        task = asyncio.create_task(module.chat(request))
+        await asyncio.sleep(0)
+        assert not task.done()
         slots.release()
+        with pytest.raises(RuntimeError):
+            await task
+        assert not slots.locked()
 
 
-async def test_rate_limit_returns_retry_after():
-    from guardrails.rate_limiter import rate_limit, SlidingWindowRateLimiter
-    from fastapi import HTTPException
-    request = Request({"type": "http", "client": ("192.0.2.1", 1234), "headers": [], "path": "/api/chat", "query_string": b""})
-    with patch("config.ENABLE_RATE_LIMITING", True), patch("guardrails.rate_limiter._rate_limiter", SlidingWindowRateLimiter()):
-        dependency = rate_limit(1, 60)
-        await dependency(request)
-        with pytest.raises(HTTPException) as exc:
-            await dependency(request)
-    assert exc.value.status_code == 429
-    assert int(exc.value.headers["Retry-After"]) > 0

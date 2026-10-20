@@ -7,12 +7,12 @@ Cortex keeps HTTP handling, workflow orchestration, application policy and exter
 | Package | Owns |
 | --- | --- |
 | api | HTTP routes, status codes and public schemas |
-| workflows/crag | Graph assembly, state, edges, timeouts and retry orchestration |
+| workflows/crag | Graph assembly, state, edges and retry orchestration |
 | services | Application policy, prompts, generation, evidence assessment and history budgeting |
 | providers | TypeSafe client lifecycle and calls, Groq model construction, Tavily requests |
 | retrieval | Embeddings, scoped vector search, evidence preparation, parsing and indexing |
 | repositories | Shared Supabase client, document metadata, conversations and raw-file storage |
-| guardrails | Input, ingestion, output, PII and rate-limit checks |
+| guardrails | Input, ingestion, output, PII checks |
 | evals | Datasets, metric scoring, benchmark execution and reports |
 | tests/unit | Isolated logic and mocked graph/provider tests |
 | tests/integration | HTTP contracts and ingestion boundary tests |

@@ -15,30 +15,8 @@ from guardrails.ingestion import (
 )
 from guardrails.pii import _is_luhn_valid, redact_pii, redact_pii_async
 from guardrails.input import check_prompt, check_prompt_async
-from guardrails.rate_limiter import SlidingWindowRateLimiter
 
 
-class TestRateLimiter(unittest.IsolatedAsyncioTestCase):
-    async def test_sliding_window_rate_limiter(self):
-        limiter = SlidingWindowRateLimiter()
-        key = "test_user_1:endpoint"
-
-        # Allow up to 3 requests in 2 seconds
-        for i in range(3):
-            res = await limiter.check(key, limit=3, window_seconds=2)
-            self.assertTrue(res.allowed)
-            self.assertEqual(res.remaining, 2 - i)
-
-        # 4th request must be blocked
-        blocked_res = await limiter.check(key, limit=3, window_seconds=2)
-        self.assertFalse(blocked_res.allowed)
-        self.assertEqual(blocked_res.remaining, 0)
-        self.assertGreaterEqual(blocked_res.reset_after_seconds, 1)
-
-        # Wait for window expiry
-        await asyncio.sleep(2.1)
-        res_after = await limiter.check(key, limit=3, window_seconds=2)
-        self.assertTrue(res_after.allowed)
 
 
 class TestPromptGuard(unittest.TestCase):

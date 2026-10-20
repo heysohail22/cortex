@@ -1,11 +1,5 @@
 from __future__ import annotations
 
-from guardrails.rate_limiter import (
-    RateLimitResult,
-    SlidingWindowRateLimiter,
-    get_client_identifier,
-    rate_limit,
-)
 from guardrails.input import (
     PromptGuard,
     PromptGuardResult,
@@ -33,11 +27,6 @@ from guardrails.output import (
 )
 
 __all__ = [
-    # Rate Limiter
-    "RateLimitResult",
-    "SlidingWindowRateLimiter",
-    "get_client_identifier",
-    "rate_limit",
     # Prompt Guard
     "PromptGuard",
     "PromptGuardResult",

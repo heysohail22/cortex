@@ -10,7 +10,7 @@ from providers.structured import InvalidProviderOutput
 from services.answer_contracts import GenerationPayload
 
 ARGS = dict(model="test-model", system="System", payload={"question": "q"}, schema=GenerationPayload.model_json_schema(),
-            temperature=0.2, max_tokens=100, timeout=1, reasoning=None)
+            temperature=0.2, max_tokens=100, reasoning=None)
 
 
 async def test_groq_structured_request_settings_and_usage():
@@ -40,7 +40,6 @@ async def test_gemini_structured_request_and_usage():
     assert response.model == "pinned-version"
     cfg = create.call_args.kwargs["config"]
     assert cfg.max_output_tokens == 100 and cfg.response_mime_type == "application/json"
-    assert cfg.http_options.timeout == 1000
     assert cfg.system_instruction == "System"
 
 
@@ -77,3 +76,18 @@ async def test_gpt_oss_uses_low_reasoning_by_default_and_preserves_override():
         assert create.call_args.kwargs['reasoning_effort'] == 'low'
         await groq.generate_structured(**{**ARGS, 'model': 'openai/gpt-oss-120b', 'reasoning': 'high'})
         assert create.call_args.kwargs['reasoning_effort'] == 'high'
+
+
+async def test_groq_unlimited_timeout_is_passed_as_none():
+    create = AsyncMock(return_value=NS(choices=[NS(finish_reason='stop', message=NS(content='{}'))], model='m', usage=None))
+    with patch.object(groq, 'get_answer_client', return_value=NS(chat=NS(completions=NS(create=create)))):
+        await groq.generate_structured(**ARGS)
+    assert create.call_args.kwargs['timeout'] is None
+
+
+def test_jev_unlimited_timeout_disables_transport_and_retry_deadlines():
+    from providers import typesafe
+    with patch.object(typesafe, '_client', None), patch('config.TYPESAFE_API_KEY', 'test'), patch.object(typesafe, 'AsyncTypeSafeClient') as create:
+        typesafe.get_client()
+    assert create.call_args.kwargs['timeout'].read is None
+    assert create.call_args.kwargs['retry'].timeout is None

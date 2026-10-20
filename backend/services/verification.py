@@ -1,7 +1,6 @@
 """Independent evidence-support checking with explicit failure and coverage states."""
 from __future__ import annotations
 
-import asyncio
 import logging
 import math
 import time
@@ -29,7 +28,7 @@ Keep reason concise and feedback bounded. confidence may be null; do not invent 
 
 async def verify_answer_async(question: str, generation: GenerationResult, snapshot: list[EvidencePassage], *,
                               evidence_status: str | None = None, missing_requirements: str = "",
-                              timeout: float | None = None) -> VerificationResult:
+                              ) -> VerificationResult:
     started = time.monotonic()
     metadata = {"provider": "groq", "model": config.VERIFICATION_MODEL}
     if generation.source == "llm" and generation.status == "SUCCESS":
@@ -45,19 +44,16 @@ async def verify_answer_async(question: str, generation: GenerationResult, snaps
         return VerificationResult(status="UNSUPPORTED", reason="Invalid claim spans or source references.")
     result = VerificationResult(status="UNKNOWN", reason="Verification unavailable.", **metadata)
     try:
-        limit = min(timeout if timeout is not None else config.TIMEOUT_GROUNDEDNESS, config.TIMEOUT_GROUNDEDNESS)
-        if limit <= 0:
-            raise TimeoutError()
         metadata["request_made"] = True
-        response = await asyncio.wait_for(generate_structured(
+        response = await generate_structured(
             "groq", model=config.VERIFICATION_MODEL, system=VERIFICATION_SYSTEM_PROMPT,
             payload={"question": question[:4000], "answer": generation.answer,
                      "claims": [{"index": i, **claim.model_dump()} for i, claim in enumerate(generation.claims)],
                      "evidence": [p.model_dump() for p in snapshot], "evidence_status": evidence_status,
                      "missing_requirements": missing_requirements[:1000]},
             schema=VerificationPayload.model_json_schema(), temperature=0.0,
-            max_tokens=config.MAX_VERIFICATION_OUTPUT_TOKENS, timeout=limit, reasoning=config.VERIFICATION_REASONING,
-        ), timeout=limit)
+            max_tokens=config.MAX_VERIFICATION_OUTPUT_TOKENS, reasoning=config.VERIFICATION_REASONING,
+        )
         metadata.update(model=response.model, usage=response.usage)
         verdict = VerificationPayload.model_validate(response.data)
         all_indices = set(range(len(generation.claims)))

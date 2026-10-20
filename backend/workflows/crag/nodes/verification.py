@@ -1,15 +1,13 @@
 """Verify the displayed candidate against exactly the generation evidence snapshot."""
 from __future__ import annotations
 
-import asyncio
 import logging
 from guardrails.output import scrub_output
 
 from services.answer_contracts import EvidencePassage, GenerationResult, VerificationResult
 from services.verification import verify_answer_async
-from workflows.crag.nodes.generation import operational_response, remaining_time
+from workflows.crag.nodes.generation import operational_response
 from workflows.crag.state import CRAGState
-import config
 
 logger = logging.getLogger(__name__)
 
@@ -22,15 +20,11 @@ async def groundedness_check_node(state: CRAGState) -> CRAGState:
             return {**operational_response(state, "I could not find supporting evidence to answer this question. Please provide a relevant source or clarify your question.", "SKIPPED"),
                     "route": "no_answer_evidence"}
         snapshot = [EvidencePassage.model_validate(p) for p in state.get("generation_snapshot", [])]
-        limit = remaining_time(state, config.TIMEOUT_GROUNDEDNESS)
-        if limit <= 0:
-            raise TimeoutError()
         request_started = True
-        result = await asyncio.wait_for(verify_answer_async(
+        result = await verify_answer_async(
             state["question"], generation, snapshot, evidence_status=state.get("evidence_status"),
             missing_requirements=state.get("missing_requirements", ""),
-            timeout=limit,
-        ), timeout=limit)
+        )
     except Exception as exc:
         # Log only exception type: provider bodies can contain private evidence.
         logger.warning("Verification node unavailable (%s); request_started=%s",

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import asyncio
 import math
+import httpx2
 from typing import Any
 from typesafe_sdk import AsyncTypeSafeClient, Choice, Noul, RetryPolicy
 import config
@@ -16,8 +16,8 @@ def get_client() -> AsyncTypeSafeClient:
             raise ValueError("Jev credentials unavailable")
         _client = AsyncTypeSafeClient(
             api_key=config.TYPESAFE_API_KEY, model=config.JEV_MODEL,
-            timeout=config.TIMEOUT_JEV,
-            retry=RetryPolicy(max_retries=config.JEV_MAX_RETRIES, timeout=config.TIMEOUT_JEV),
+            timeout=httpx2.Timeout(None),
+            retry=RetryPolicy(max_retries=config.JEV_MAX_RETRIES, timeout=None),
         )
     return _client
 
@@ -44,7 +44,7 @@ def yes_no_question(*, instructions: str):
     return Noul(instructions=instructions)
 
 
-async def evaluate_questions(*, state: dict, questions: dict, timeout: float):
-    return await asyncio.wait_for(get_client().system_one(
+async def evaluate_questions(*, state: dict, questions: dict):
+    return await get_client().system_one(
         state=state, questions=questions, model=config.JEV_MODEL,
-    ), timeout=timeout)
+    )

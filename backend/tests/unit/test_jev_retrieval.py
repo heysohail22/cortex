@@ -23,7 +23,7 @@ def state(**kwargs):
             "has_documents": True, "document_names": ["policy.pdf"], "conversation_history": "",
             "retained_evidence": [], "chunks": [], "retrieval_corrections_used": 0,
             "external_evidence_policy": "document_only", "external_search_used": False,
-            "retrieval_deadline": time.monotonic() + 20, **kwargs}
+            **kwargs}
 
 
 def assessment(status, chunks):
@@ -192,11 +192,6 @@ async def test_rewrite_failure_finalizes_existing_evidence():
     assert result["correction_action"] == "finalize" and result["retained_evidence"] == [A]
 
 
-async def test_stage_deadline_prevents_new_work():
-    with patch.object(nodes.vs, "similarity_search") as retrieve:
-        result = await nodes.retrieve_node(state(retrieval_deadline=time.monotonic() - 1))
-    assert result["evidence_status"] == "UNKNOWN"
-    retrieve.assert_not_called()
 
 
 async def test_web_policy_needs_trusted_permission_and_query():

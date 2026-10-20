@@ -13,13 +13,11 @@ class CRAGState(TypedDict):
     generation_result: Dict[str, Any]
     generation_snapshot: List[Dict[str, Any]]
     snapshot_truncated: bool
-    answer_deadline: float
     answer_repairs_used: int
     repair_feedback: Dict[str, Any]
     answer_attempts: List[Dict[str, Any]]
     evidence_status: str
     retrieval_status: str
-    retrieval_deadline: float
     retrieval_corrections_used: int
     retained_evidence: List[Dict[str, Any]]
     evidence_assessment: Dict[str, Any]

@@ -4,7 +4,7 @@ The first rebuild phase replaces intent classification with one TypeSafe request
 
 ## Configure
 
-Run `uv sync` in `backend`. Add `TYPESAFE_API_KEY` to `backend/.env`. The router defaults to `ROUTER_PROVIDER=jev`, `JEV_MODEL=jev`, a five second overall deadline and no SDK retries. Use `ROUTER_PROVIDER=groq` for explicit rollback to the legacy classifier. This rollback does not provide Jev's separate safety assessments; existing local protections remain enabled.
+Run `uv sync` in `backend`. Add `TYPESAFE_API_KEY` to `backend/.env`. The provider and model are fixed in config.py as Jev and jev-latest. The client does not impose an application deadline; SDK retries remain bounded by count.
 
 The Jev alias may change upstream. Before a live rollout, use `AsyncTypeSafeClient.models.list()` with your account, select an available model, and pin its ID in `JEV_MODEL` for reproducible comparisons. Missing credentials or a failed safety assessment produces a temporary controlled response, never a safe verdict.
 
@@ -18,11 +18,9 @@ Graph state and `run_crag_async` results include `router_decision` with provider
 
 A reusable async client is closed on FastAPI shutdown. Input context uses bounded document profiles and recent conversation text, with document routing disabled if no accessible documents exist. This does not add authentication or replace the repository's existing access-control assumptions.
 
-## Rate limiting and overload
+## Concurrency
 
-Existing chat and upload rate limits remain before external work. Identity uses the ASGI peer rather than caller supplied session IDs or forwarding headers. Configure Uvicorn's trusted proxy settings for your actual deployment; never trust arbitrary forwarders. The application has no authenticated principal today.
-
-`MAX_CONCURRENT_CHATS` bounds active chat work per process; overload receives HTTP 503 and Retry-After. Rate-limit responses remain HTTP 429 with Retry-After. Multiple workers need shared counters and concurrency coordination before these limits can be treated as deployment-wide.
+Chat and upload rate limiting has been removed. `MAX_CONCURRENT_CHATS` bounds active chat work per process; additional chat requests wait for a slot. There is no application request deadline. External providers and hosting infrastructure may still reject or terminate requests.
 
 ## Validation
 

@@ -123,7 +123,7 @@ async def generate_answer_async(
     question: str, snapshot: list[EvidencePassage], *, source: str,
     evidence_status: str | None = None, missing_requirements: str = "",
     conflicting_ids: list[str] | None = None, conversation_history: Any = "",
-    previous_draft: str = "", feedback: dict | None = None, timeout: float | None = None,
+    previous_draft: str = "", feedback: dict | None = None,
 ) -> GenerationResult:
     started = time.monotonic()
     provider, model = config.GENERATION_PROVIDER, config.GENERATION_MODEL
@@ -132,11 +132,8 @@ async def generate_answer_async(
     try:
         if source != "llm" and (not snapshot or (source == "rag" and evidence_status in ("NONE", "UNKNOWN"))):
             return GenerationResult(status="ERROR", error_kind="no_evidence", **metadata)
-        limit = min(timeout if timeout is not None else config.TIMEOUT_GENERATION, config.TIMEOUT_GENERATION)
-        if limit <= 0:
-            raise TimeoutError()
         metadata["request_made"] = True
-        response = await asyncio.wait_for(generate_structured(
+        response = await generate_structured(
             provider, model=model, system=GENERATION_SYSTEM_PROMPT,
             payload={"question": question[:4000], "route": source, "evidence_status": evidence_status,
                      "missing_requirements": missing_requirements[:1000], "conflicting_ids": (conflicting_ids or [])[:24],
@@ -144,8 +141,8 @@ async def generate_answer_async(
                      "evidence": [p.model_dump() for p in snapshot], "draft": previous_draft[:config.MAX_ANSWER_CHARS],
                      "repair_feedback": feedback},
             schema=GenerationPayload.model_json_schema(), temperature=0.0 if feedback else config.GENERATION_TEMPERATURE,
-            max_tokens=config.MAX_ANSWER_OUTPUT_TOKENS, timeout=limit, reasoning=config.GENERATION_REASONING,
-        ), timeout=limit)
+            max_tokens=config.MAX_ANSWER_OUTPUT_TOKENS, reasoning=config.GENERATION_REASONING,
+        )
         metadata.update(model=response.model, usage=response.usage)
         try:
             draft = GenerationPayload.model_validate(response.data)
