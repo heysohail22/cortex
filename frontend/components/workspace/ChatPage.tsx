@@ -37,9 +37,6 @@ export function ChatPage() {
       ? `${activeSession.title} — Cortex`
       : "New conversation — Cortex";
   }, [activeSession?.title, activeSession]);
-  const latestAnswer = activeSession?.messages.findLast(
-    (message) => message.role === "assistant" && !message.isLoading,
-  );
   const unavailable = Boolean(activeChatId && !activeSession);
   const restoring = !hydrated || (unavailable && historyStatus === "loading");
   return (
@@ -116,8 +113,6 @@ export function ChatPage() {
             onStop={stopResponse}
             disabled={!hydrated}
             onOpenDocuments={openDocumentUpload}
-            hasDocuments={documents.length > 0}
-            source={latestAnswer?.source}
           />
         </>
       )}

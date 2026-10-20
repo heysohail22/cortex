@@ -3,7 +3,14 @@
 import { verificationLabel, type VerificationStatus } from "@/lib/verification";
 
 import React from "react";
-import { Loader2, ShieldCheck, CircleHelp } from "lucide-react";
+import {
+  Loader2,
+  ShieldCheck,
+  CircleHelp,
+  Sparkles,
+  BookOpen,
+  Globe2,
+} from "lucide-react";
 import { MarkdownContent } from "./MarkdownContent";
 import { Sources } from "./Sources";
 import { MessageActions } from "./MessageActions";
@@ -48,6 +55,67 @@ interface AssistantMessageProps {
   onWebSearchFallback?: (question: string) => void;
 }
 
+function AnswerSourceBadge({
+  source,
+  isLoading,
+}: Pick<MessageData, "source" | "isLoading">) {
+  const base =
+    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium";
+  if (isLoading)
+    return (
+      <span
+        className={`${base} border-border bg-muted/50 text-muted-foreground`}
+      >
+        Thinking…
+      </span>
+    );
+  const sources = [
+    {
+      show: source === "llm",
+      label: "Assistant",
+      icon: Sparkles,
+      color: "border-violet-300/25 bg-violet-300/10 text-violet-200",
+      description: "Answer generated from the assistant’s model knowledge.",
+    },
+    {
+      show: source === "rag" || source === "hybrid",
+      label: "Documents",
+      icon: BookOpen,
+      color: "border-emerald-300/25 bg-emerald-300/10 text-emerald-200",
+      description: "Answer generated using your uploaded documents.",
+    },
+    {
+      show: source === "web_search" || source === "hybrid",
+      label: "Web search",
+      icon: Globe2,
+      color: "border-amber-300/25 bg-amber-300/10 text-amber-200",
+      description: "Answer generated using web search results.",
+    },
+  ].filter(({ show }) => show);
+  return (
+    <span
+      role="group"
+      aria-label="Answer source"
+      className="flex flex-wrap items-center gap-1.5"
+    >
+      {sources.length ? (
+        sources.map(({ label, icon: Icon, color, description }) => (
+          <span key={label} title={description} className={`${base} ${color}`}>
+            <Icon aria-hidden="true" className="size-3" />
+            {label}
+          </span>
+        ))
+      ) : (
+        <span
+          className={`${base} border-border bg-muted/50 text-muted-foreground`}
+        >
+          {source === "guardrail" ? "Notice" : "Source unavailable"}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function AssistantMessage({
   message,
   onWebSearchFallback,
@@ -62,19 +130,12 @@ export function AssistantMessage({
 
       {/* Main Message Content */}
       <div className="flex-1 min-w-0">
-        <div className="mb-4 flex items-center gap-2">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold text-foreground">Cortex</span>
-          <span className="rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-[9px] text-muted-foreground">
-            {message.source === "rag"
-              ? "DOCUMENTS"
-              : message.source === "web_search"
-                ? "WEB"
-                : message.source === "hybrid"
-                  ? "DOCS + WEB"
-                  : message.source === "guardrail"
-                    ? "NOTICE"
-                    : "ASSISTANT"}
-          </span>
+          <AnswerSourceBadge
+            source={message.source}
+            isLoading={message.isLoading}
+          />
           {message.timestamp && (
             <span className="ml-auto text-[10px] text-muted-foreground/70">
               {message.timestamp}
