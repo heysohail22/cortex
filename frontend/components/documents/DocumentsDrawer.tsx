@@ -1,257 +1,321 @@
 "use client";
-
-import React, { useState } from "react";
+import { useState } from "react";
+import {
+  BookOpen,
+  Search,
+  Upload,
+  History,
+  Files,
+  Layers,
+  ArrowUpRight,
+  PanelLeft,
+} from "lucide-react";
 import {
   Sheet,
   SheetContent,
   SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Search,
-  SlidersHorizontal,
-  Trash2,
-  FileText,
-  Upload,
-} from "lucide-react";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { DocumentCard } from "./DocumentCard";
 import { DocumentUpload } from "./DocumentUpload";
 import { DocumentPreview, DocumentInfo } from "./DocumentPreview";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { ManageDeletedDialog, DeletedDocInfo } from "./ManageDeletedDialog";
 import { toast } from "sonner";
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-interface DocumentsDrawerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface LibraryProps {
   documents: DocumentInfo[];
   sessionId: string;
-  onDocumentUploaded: (filename: string, chunks: number, sizeMb: string) => void;
+  onDocumentUploaded: (
+    filename: string,
+    chunks: number,
+    sizeMb: string,
+  ) => void;
   onDocumentDeleted: (filename: string) => void;
   onUseInChat?: (filename: string) => void;
+  compact?: boolean;
+  onToggleSidebar?: () => void;
 }
-
-export function DocumentsDrawer({
-  open,
-  onOpenChange,
+interface DocumentsDrawerProps extends LibraryProps {
+  open: boolean;
+  onOpenChange: (value: boolean) => void;
+}
+export function DocumentLibrary({
   documents,
   sessionId,
   onDocumentUploaded,
   onDocumentDeleted,
   onUseInChat,
-}: DocumentsDrawerProps) {
-  const [activeTab, setActiveTab] = useState("my-documents");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
-
-  // Modal states
-  const [previewDoc, setPreviewDoc] = useState<DocumentInfo | null>(null);
-  const [docToDelete, setDocToDelete] = useState<string | null>(null);
-  const [manageDeletedOpen, setManageDeletedOpen] = useState(false);
-  const [deletedDocs, setDeletedDocs] = useState<DeletedDocInfo[]>([]);
-
-
-  const filteredDocs = documents.filter((d) =>
-    d.filename.toLowerCase().includes(searchQuery.toLowerCase())
+  compact,
+  onToggleSidebar,
+}: LibraryProps) {
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("recent");
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState<DocumentInfo | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [history, setHistory] = useState<DeletedDocInfo[]>([]);
+  const filtered = documents.filter((doc) =>
+    doc.filename.toLowerCase().includes(query.toLowerCase()),
   );
-
-  const handleDeleteConfirm = async () => {
-    if (!docToDelete) return;
-    const targetFile = docToDelete;
+  if (sort === "name")
+    filtered.sort((a, b) => a.filename.localeCompare(b.filename));
+  const remove = async () => {
+    if (!deleting || busy) return;
+    const filename = deleting;
+    setBusy(true);
     try {
-      const res = await fetch(
-        `${API_URL}/api/documents/${encodeURIComponent(targetFile)}?session_id=${sessionId}`,
-        { method: "DELETE" }
+      const response = await fetch(
+        `${API_URL}/api/documents/${encodeURIComponent(filename)}?session_id=${encodeURIComponent(sessionId)}`,
+        { method: "DELETE" },
       );
-      if (res.ok) {
-        onDocumentDeleted(targetFile);
-        const deletedItem = documents.find((d) => d.filename === targetFile);
-        setDeletedDocs((prev) => [
-          {
-            filename: targetFile,
-            deletedAt: "Just now",
-            sizeMb: deletedItem?.sizeMb || "2.1 MB",
-          },
-          ...prev,
-        ]);
-        toast.success(`Removed ${targetFile} from knowledge base`);
-      } else {
-        toast.error("Failed to delete document");
-      }
+      if (!response.ok) throw new Error();
+      onDocumentDeleted(filename);
+      setHistory((previous) => [
+        {
+          filename,
+          deletedAt: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          sizeMb:
+            documents.find((doc) => doc.filename === filename)?.sizeMb ||
+            "Size unavailable",
+        },
+        ...previous,
+      ]);
+      setDeleting(null);
+      toast.success("Document removed from your library");
     } catch {
-      toast.error("Network error deleting document");
+      toast.error("Could not remove the document. Please try again.");
     } finally {
-      setDocToDelete(null);
+      setBusy(false);
     }
   };
-
-  const handleRestore = (filename: string) => {
-    setDeletedDocs((prev) => prev.filter((d) => d.filename !== filename));
-    onDocumentUploaded(filename, 120, "2.0 MB");
-  };
-
-  const handlePurge = (filename: string) => {
-    setDeletedDocs((prev) => prev.filter((d) => d.filename !== filename));
-  };
-
-  // Calculate total storage
-  const totalMb = documents
-    .reduce((acc, d) => {
-      const num = parseFloat(d.sizeMb || "2.4");
-      return acc + (isNaN(num) ? 2.4 : num);
-    }, 0)
-    .toFixed(1);
-
   return (
-    <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="flex flex-col p-0 bg-[#0a0d14] border-white/8 w-full sm:max-w-[420px]">
-          {/* Header */}
-          <div className="p-5 pb-3 border-b border-white/8 flex items-center justify-between shrink-0">
-            <SheetTitle className="text-base font-semibold text-white flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[#9d93ff]" />
-              Documents
-            </SheetTitle>
-          </div>
-
-          {/* Body Tabs */}
-          <div className="flex-1 flex flex-col min-h-0 p-5 pt-2">
-            <Tabs
-              value={activeTab}
-              onValueChange={setActiveTab}
-              className="flex-1 flex flex-col min-h-0"
-            >
-              <TabsList className="grid grid-cols-2 mb-3">
-                <TabsTrigger value="my-documents">My Documents</TabsTrigger>
-                <TabsTrigger value="upload-new">Upload New</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="my-documents" className="flex-1 flex flex-col min-h-0 mt-0">
-                {/* Search & Filter Bar */}
-                <div className="flex items-center gap-2 mb-3 shrink-0">
-                  <div className="relative flex-1">
-                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
-                    <Input
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search documents..."
-                      className="pl-8.5 h-9 bg-[#121824] border-white/6 text-xs text-zinc-200 placeholder:text-zinc-500 rounded-xl"
-                    />
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9 rounded-xl border-white/6 bg-[#121824] text-zinc-400 hover:text-white shrink-0"
-                    title="Filters"
-                  >
-                    <SlidersHorizontal className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-
-                {/* Documents List */}
-                <ScrollArea className="flex-1 -mr-2 pr-2">
-                  <div className="flex flex-col gap-2">
-                    {filteredDocs.length === 0 ? (
-                      <div className="py-12 flex flex-col items-center justify-center text-center gap-2 text-zinc-500 px-4">
-                        <FileText className="w-8 h-8 opacity-40 text-[#6d5dfc]" />
-                        <span className="text-xs font-medium text-zinc-300">
-                          {searchQuery ? "No documents found" : "No documents uploaded yet"}
-                        </span>
-                        <p className="text-[11px] text-zinc-500 max-w-[200px]">
-                          {searchQuery
-                            ? "Try refining your search terms"
-                            : "Upload PDFs, DOCX, or text files to ground your chats"}
-                        </p>
-                        {!searchQuery && (
-                          <Button
-                            size="sm"
-                            onClick={() => setActiveTab("upload-new")}
-                            className="mt-2 bg-[#6d5dfc] hover:bg-[#7f70ff] text-xs h-7 rounded-lg"
-                          >
-                            <Upload className="w-3 h-3 mr-1.5" />
-                            Upload Now
-                          </Button>
-                        )}
-                      </div>
-                    ) : (
-                      filteredDocs.map((doc) => (
-                        <DocumentCard
-                          key={doc.filename}
-                          doc={doc}
-                          sessionId={sessionId}
-                          onPreview={(d) => setPreviewDoc(d)}
-                          onDelete={(f) => setDocToDelete(f)}
-                          onUseInChat={onUseInChat}
-                        />
-                      ))
-                    )}
-                  </div>
-                </ScrollArea>
-              </TabsContent>
-
-              <TabsContent value="upload-new" className="flex-1 flex flex-col mt-0 pt-2">
-                <DocumentUpload
-                  sessionId={sessionId}
-                  onUploaded={(filename, chunks, sizeMb) => {
-                    onDocumentUploaded(filename, chunks, sizeMb);
-                    setActiveTab("my-documents");
-                  }}
-                  isUploading={isUploading}
-                  setIsUploading={setIsUploading}
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Footer Stats & Manage Deleted */}
-          <div className="p-4 border-t border-white/8 bg-[#0d111a] flex flex-col gap-2.5 shrink-0">
-            <div className="flex items-center justify-between text-[11px] text-zinc-400 font-mono">
-              <span>Total {documents.length} documents</span>
-              <span>{totalMb} MB used</span>
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-background">
+      {!compact && (
+        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border px-4 sm:px-7">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggleSidebar}
+            aria-label="Toggle sidebar"
+          >
+            <PanelLeft className="size-4" />
+          </Button>
+          <span className="text-xs text-muted-foreground">Workspace</span>
+          <span className="text-xs text-muted-foreground/50">/</span>
+          <span className="text-xs font-medium">Knowledge base</span>
+        </header>
+      )}
+      <div
+        className={`min-h-0 flex-1 overflow-y-auto ${compact ? "p-5" : "p-5 sm:p-10"}`}
+      >
+        <div className="mx-auto max-w-6xl">
+          <div className="flex flex-wrap items-start justify-between gap-5">
+            <div>
+              <span className="section-label">YOUR PERSONAL LIBRARY</span>
+              <h1
+                className={`mt-3 font-medium tracking-tight ${compact ? "text-2xl" : "text-3xl sm:text-4xl"}`}
+              >
+                Knowledge, all together.
+              </h1>
+              <p className="mt-3 max-w-lg text-xs leading-6 text-muted-foreground">
+                A home for your documents. Add what matters, then turn it into a
+                conversation.
+              </p>
             </div>
-
-            <Button
-              variant="outline"
-              onClick={() => setManageDeletedOpen(true)}
-              className="w-full h-9 rounded-xl border-white/8 bg-[#121824] hover:bg-[#161f30] text-zinc-300 text-xs font-medium flex items-center justify-center gap-2 transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5 text-zinc-500" />
-              Manage deleted documents
+            <Button onClick={() => setUploadOpen(true)} className="gap-2">
+              <Upload className="size-3.5" />
+              Add documents
             </Button>
           </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Preview Dialog */}
+          <div className="my-7 grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Files className="size-3.5" />
+                Documents
+              </div>
+              <p className="mt-3 text-2xl font-medium tracking-tight">
+                {documents.length}
+                <span className="ml-2 text-[11px] font-normal tracking-normal text-muted-foreground">
+                  in your library
+                </span>
+              </p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Layers className="size-3.5" />
+                Indexed passages
+              </div>
+              <p className="mt-3 text-2xl font-medium tracking-tight">
+                {documents
+                  .reduce((sum, doc) => sum + (doc.chunks || 0), 0)
+                  .toLocaleString()}
+                <span className="ml-2 text-[11px] font-normal tracking-normal text-muted-foreground">
+                  searchable
+                </span>
+              </p>
+            </div>
+          </div>
+          <div className="mb-5 flex flex-wrap items-center gap-3">
+            <div className="relative min-w-40 flex-1">
+              <Search className="pointer-events-none absolute left-3 top-3 size-3.5 text-muted-foreground" />
+              <Input
+                aria-label="Search documents"
+                placeholder="Find a document…"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="pl-9 text-xs"
+              />
+            </div>
+            <select
+              aria-label="Sort documents"
+              value={sort}
+              onChange={(event) => setSort(event.target.value)}
+              className="h-9 rounded-lg border border-input bg-card px-3 text-xs text-muted-foreground"
+            >
+              <option value="recent">Library order</option>
+              <option value="name">Name A–Z</option>
+            </select>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setHistoryOpen(true)}
+              aria-label="View recently removed documents"
+            >
+              <History className="size-4" />
+            </Button>
+          </div>
+          {filtered.length > 0 ? (
+            <div
+              className={`grid gap-4 ${compact ? "grid-cols-1" : "sm:grid-cols-2 xl:grid-cols-3"}`}
+            >
+              {filtered.map((doc) => (
+                <DocumentCard
+                  key={doc.filename}
+                  doc={doc}
+                  sessionId={sessionId}
+                  onPreview={setPreview}
+                  onDelete={setDeleting}
+                  onUseInChat={onUseInChat}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/40 px-5 py-10 text-center">
+              <span className="mb-5 flex size-14 items-center justify-center rounded-2xl border border-border bg-muted/50">
+                <BookOpen className="size-6 text-primary" />
+              </span>
+              <h2 className="text-base font-medium">
+                {query
+                  ? "No documents match your search"
+                  : "Good answers start with good sources"}
+              </h2>
+              <p className="mt-3 max-w-sm text-xs leading-6 text-muted-foreground">
+                {query
+                  ? "Try another name, or clear your search to see your library."
+                  : "Add your first document and give your conversations a little more context."}
+              </p>
+              <Button
+                variant="outline"
+                className="mt-5 gap-2"
+                onClick={() => (query ? setQuery("") : setUploadOpen(true))}
+              >
+                {query ? "Clear search" : "Upload your first document"}
+                <ArrowUpRight className="size-3.5" />
+              </Button>
+            </div>
+          )}
+          <p className="mt-6 text-[11px] text-muted-foreground/70">
+            PDF, Word, text, and Markdown. Your library is shared across your
+            conversations.
+          </p>
+        </div>
+      </div>
+      <Dialog
+        open={uploadOpen}
+        onOpenChange={(value) => {
+          if (!uploading) setUploadOpen(value);
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <span className="section-label">GROW YOUR LIBRARY</span>
+            <DialogTitle>Add a little context</DialogTitle>
+            <DialogDescription>
+              Upload a document to explore it with Cortex.
+            </DialogDescription>
+          </DialogHeader>
+          <DocumentUpload
+            sessionId={sessionId}
+            isUploading={uploading}
+            setIsUploading={setUploading}
+            onUploaded={(filename, chunks, size) => {
+              onDocumentUploaded(filename, chunks, size);
+              setUploadOpen(false);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
       <DocumentPreview
-        open={!!previewDoc}
-        document={previewDoc}
+        open={Boolean(preview)}
+        document={preview}
         sessionId={sessionId}
-        onOpenChange={(op) => !op && setPreviewDoc(null)}
+        onOpenChange={(value) => {
+          if (!value) setPreview(null);
+        }}
         onUseInChat={onUseInChat}
       />
-
-      {/* Delete Confirmation Alert Dialog */}
       <DeleteConfirmDialog
-        open={!!docToDelete}
-        filename={docToDelete || ""}
-        onOpenChange={(op) => !op && setDocToDelete(null)}
-        onConfirm={handleDeleteConfirm}
+        open={Boolean(deleting)}
+        filename={deleting || ""}
+        onOpenChange={(value) => {
+          if (!value && !busy) setDeleting(null);
+        }}
+        onConfirm={remove}
+        isDeleting={busy}
       />
-
-      {/* Manage Deleted Recycle Bin Modal */}
       <ManageDeletedDialog
-        open={manageDeletedOpen}
-        onOpenChange={setManageDeletedOpen}
-        deletedDocs={deletedDocs}
-        onRestore={handleRestore}
-        onPurge={handlePurge}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        deletedDocs={history}
       />
-    </>
+    </div>
+  );
+}
+export function DocumentsDrawer({
+  open,
+  onOpenChange,
+  ...props
+}: DocumentsDrawerProps) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full gap-0 p-0 sm:max-w-xl">
+        <div className="shrink-0 border-b border-border px-5 py-5">
+          <SheetTitle className="flex items-center gap-2 text-sm">
+            <BookOpen className="size-4 text-primary" />
+            Knowledge base
+          </SheetTitle>
+          <SheetDescription className="mt-1 text-xs text-muted-foreground">
+            Your sources, close to the conversation.
+          </SheetDescription>
+        </div>
+        <DocumentLibrary {...props} compact />
+      </SheetContent>
+    </Sheet>
   );
 }

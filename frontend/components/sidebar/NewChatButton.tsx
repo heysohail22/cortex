@@ -9,7 +9,10 @@ interface NewChatButtonProps {
   isCollapsed?: boolean;
 }
 
-export function NewChatButton({ onClick, isCollapsed = false }: NewChatButtonProps) {
+export function NewChatButton({
+  onClick,
+  isCollapsed = false,
+}: NewChatButtonProps) {
   if (isCollapsed) {
     return (
       <Button
@@ -28,7 +31,7 @@ export function NewChatButton({ onClick, isCollapsed = false }: NewChatButtonPro
     <div className="px-3 pt-3 pb-2">
       <Button
         onClick={onClick}
-        className="w-full h-10 rounded-xl bg-gradient-to-r from-[#6d5dfc] to-[#7f70ff] hover:from-[#7b6cff] hover:to-[#8c7fff] text-white font-medium text-[13px] shadow-md shadow-[#6d5dfc]/20 border border-[#6d5dfc]/40 flex items-center justify-center gap-2 px-3.5 transition-all duration-200"
+        className="w-full h-10 rounded-lg bg-white/8 hover:bg-white/12 text-zinc-100 font-medium text-xs border border-white/10 flex items-center justify-start gap-2 px-3.5 transition-colors"
       >
         <Plus className="w-4 h-4" />
         <span>New Chat</span>

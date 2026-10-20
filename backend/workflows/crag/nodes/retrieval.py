@@ -12,7 +12,7 @@ from services.query_rewriting import rewrite_retrieval_query_async
 from providers.tavily import search_web_async
 
 
-def _unknown(state: CRAGState, reason: str) -> dict:
+def _unknown(state: CRAGState, reason: str) -> CRAGState:
     return {**state, "evidence_status": "UNKNOWN", "evaluation_result": "UNKNOWN",
             "evaluation_reason": reason, "chunks": [], "refined_chunks": [], "retained_evidence": []}
 

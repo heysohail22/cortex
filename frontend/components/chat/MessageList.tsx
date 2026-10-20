@@ -21,12 +21,16 @@ export function MessageList({
   const scrollEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    scrollEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollEndRef.current?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+    });
   }, [messages]);
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 overflow-y-auto px-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-8">
         <EmptyState
           onSelectPrompt={onSelectPrompt}
           onOpenDocuments={onOpenDocuments}
@@ -36,8 +40,8 @@ export function MessageList({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-6">
-      <div className="max-w-[780px] mx-auto flex flex-col justify-start">
+    <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-8 py-6">
+      <div className="max-w-[816px] mx-auto flex flex-col justify-start">
         {messages.map((msg) => {
           if (msg.role === "user") {
             return (

@@ -1,9 +1,7 @@
 "use client";
-
-import React from "react";
+import { Trash2, Loader2 } from "lucide-react";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -11,41 +9,49 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-interface DeleteConfirmDialogProps {
-  open: boolean;
-  filename: string;
-  onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
-}
-
+import { Button } from "@/components/ui/button";
 export function DeleteConfirmDialog({
   open,
   filename,
   onOpenChange,
   onConfirm,
-}: DeleteConfirmDialogProps) {
+  isDeleting,
+}: {
+  open: boolean;
+  filename: string;
+  onOpenChange: (value: boolean) => void;
+  onConfirm: () => void;
+  isDeleting?: boolean;
+}) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
+        <span className="flex size-12 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
+          <Trash2 className="size-5" />
+        </span>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete document?</AlertDialogTitle>
+          <AlertDialogTitle>Remove this source?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will remove <span className="font-semibold text-zinc-200">&ldquo;{filename}&rdquo;</span> from your knowledge base and it will no longer be available for retrieval.
+            <span className="break-all font-medium text-foreground">
+              {filename}
+            </span>{" "}
+            will be removed from your library. Future answers will no longer use
+            it. You’ll need the original file to upload it again.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => onOpenChange(false)}>
-            Cancel
+          <AlertDialogCancel disabled={isDeleting}>
+            Keep document
           </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() => {
-              onConfirm();
-              onOpenChange(false);
-            }}
+          <Button
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="gap-2"
           >
-            Delete
-          </AlertDialogAction>
+            {isDeleting && <Loader2 className="size-3.5 animate-spin" />}
+            {isDeleting ? "Removing…" : "Remove document"}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

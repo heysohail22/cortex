@@ -1,34 +1,22 @@
 "use client";
-
-import React from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
-interface UserMessageProps {
+export function UserMessage({
+  content,
+  timestamp,
+}: {
   content: string;
   timestamp?: string;
-}
-
-export function UserMessage({ content, timestamp }: UserMessageProps) {
+}) {
   return (
-    <div className="flex items-end justify-end gap-3 mb-6 animate-fade-in">
-      {/* Message Bubble + Timestamp */}
-      <div className="flex items-end gap-2.5 max-w-[80%] sm:max-w-[70%]">
-        {timestamp && (
-          <span className="text-[11px] text-zinc-500 font-mono select-none shrink-0 mb-1">
-            {timestamp}
-          </span>
-        )}
-        <div className="rounded-2xl rounded-tr-xs bg-[#161f30] border border-white/8 px-4 py-3 text-sm text-zinc-100 leading-relaxed shadow-sm break-words">
-          {content}
-        </div>
+    <article
+      aria-label="Your message"
+      className="mb-8 ml-auto flex max-w-[92%] flex-col items-end gap-2 animate-fade-in sm:max-w-[80%]"
+    >
+      <div className="rounded-2xl rounded-br-md border border-primary/10 bg-primary/[0.08] px-5 py-3.5 text-sm leading-7 text-foreground whitespace-pre-wrap break-words">
+        {content}
       </div>
-
-      {/* User Avatar */}
-      <Avatar className="w-8 h-8 rounded-full ring-1 ring-white/10 shrink-0 mb-0.5">
-        <AvatarFallback className="bg-gradient-to-br from-[#6d5dfc]/30 to-[#161f30] text-[#9d93ff] text-xs font-semibold">
-          U
-        </AvatarFallback>
-      </Avatar>
-    </div>
+      <span className="pr-1 text-[10px] text-muted-foreground">
+        You{timestamp ? ` · ${timestamp}` : ""}
+      </span>
+    </article>
   );
 }

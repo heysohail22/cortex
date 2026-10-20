@@ -9,7 +9,11 @@ interface CoretextLogoProps {
   glow?: boolean;
 }
 
-export function CoretextLogoMark({ className = "w-4 h-4" }: { className?: string }) {
+export function CoretextLogoMark({
+  className = "w-4 h-4",
+}: {
+  className?: string;
+}) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -38,7 +42,7 @@ export function CoretextLogoMark({ className = "w-4 h-4" }: { className?: string
 export function CoretextLogo({
   size = "md",
   className,
-  glow = true,
+  glow = false,
 }: CoretextLogoProps) {
   const sizeClasses = {
     sm: "w-8 h-8 rounded-xl",
@@ -55,10 +59,10 @@ export function CoretextLogo({
   return (
     <div
       className={cn(
-        "bg-gradient-to-br from-[#7c3aed] via-[#6d5dfc] to-[#4f46e5] flex items-center justify-center text-white shrink-0 transition-transform select-none",
+        "bg-primary/15 border border-primary/20 flex items-center justify-center text-primary shrink-0 transition-transform select-none",
         sizeClasses[size],
-        glow && "shadow-md shadow-[#6d5dfc]/35 ring-1 ring-white/15",
-        className
+        glow && "shadow-md shadow-[#b5a0ee]/35 ring-1 ring-white/15",
+        className,
       )}
     >
       <CoretextLogoMark className={iconSizes[size]} />

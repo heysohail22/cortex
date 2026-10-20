@@ -5,14 +5,21 @@ import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
-  title: "Coretext — Corrective RAG Assistant",
+  title: "Cortex — Corrective RAG Assistant",
   description:
     "Ask questions about your knowledge base with transparent Corrective RAG, real-time web search, and AI reasoning.",
-  keywords: ["RAG", "Corrective RAG", "Coretext", "AI", "Agentic RAG", "Knowledge Base"],
+  keywords: [
+    "RAG",
+    "Corrective RAG",
+    "Cortex",
+    "AI",
+    "Agentic RAG",
+    "Knowledge Base",
+  ],
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",
@@ -24,9 +31,13 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`dark ${inter.variable}`} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`dark ${inter.variable}`}
+      suppressHydrationWarning
+    >
       <body
-        className="bg-[#080b11] text-zinc-100 font-sans antialiased overflow-hidden min-h-screen"
+        className="bg-background text-foreground font-sans antialiased overflow-hidden min-h-screen"
         suppressHydrationWarning
       >
         {children}

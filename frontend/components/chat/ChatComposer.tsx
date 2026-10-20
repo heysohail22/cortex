@@ -1,113 +1,99 @@
 "use client";
-
-import React, { useRef, useEffect } from "react";
-import {
-  Paperclip,
-  Send,
-} from "lucide-react";
+import { useEffect, useRef } from "react";
+import { ArrowUp, Paperclip, Sparkles, Loader2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-interface ChatComposerProps {
+import { Textarea } from "@/components/ui/textarea";
+interface Props {
   value: string;
-  onChange: (v: string) => void;
+  onChange: (value: string) => void;
   onSend: (text?: string) => void;
   isLoading: boolean;
   onOpenDocuments?: () => void;
   hasDocuments?: boolean;
 }
-
 export function ChatComposer({
   value,
   onChange,
   onSend,
   isLoading,
   onOpenDocuments,
-}: ChatComposerProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Auto-resize textarea up to max height
+  hasDocuments,
+}: Props) {
+  const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    ta.style.height = "auto";
-    ta.style.height = `${Math.min(ta.scrollHeight, 180)}px`;
+    if (ref.current) {
+      ref.current.style.height = "auto";
+      ref.current.style.height = `${Math.min(ref.current.scrollHeight, 180)}px`;
+    }
   }, [value]);
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Enter sends message.
-    // Shift + Enter inserts new line.
-    if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey) {
-      e.preventDefault();
-      if (!isLoading && value.trim()) {
-        onSend(value.trim());
-      }
-    }
+  const send = () => {
+    if (value.trim() && !isLoading) onSend(value.trim());
   };
-
-  const handleSendClick = () => {
-    if (!isLoading && value.trim()) {
-      onSend(value.trim());
-    }
-  };
-
-  const canSend = value.trim().length > 0 && !isLoading;
-
   return (
-    <div className="w-full max-w-[800px] mx-auto px-4 pb-4 pt-2">
-      <div className="rounded-2xl bg-[#0d111a] border border-white/10 shadow-2xl focus-within:border-[#6d5dfc]/50 focus-within:shadow-[0_0_24px_rgba(109,93,252,0.15)] transition-all duration-300 p-3.5 flex flex-col gap-3">
-        {/* Textarea */}
-        <textarea
-          ref={textareaRef}
+    <div className="mx-auto w-full max-w-[872px] shrink-0 px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 sm:px-7">
+      <div className="rounded-2xl border border-input bg-card p-3 shadow-lg shadow-black/10 transition-colors focus-within:border-primary/50">
+        <Textarea
+          ref={ref}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask anything about your documents..."
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (
+              !event.nativeEvent.isComposing &&
+              event.key === "Enter" &&
+              !event.shiftKey
+            ) {
+              event.preventDefault();
+              send();
+            }
+          }}
+          rows={2}
+          aria-label="Message Cortex"
+          placeholder="Ask a question, or explore an idea…"
           disabled={isLoading}
-          rows={1}
-          suppressHydrationWarning
-          className="w-full bg-transparent border-0 outline-none text-zinc-100 text-sm placeholder:text-zinc-500 resize-none max-h-[180px] overflow-y-auto leading-relaxed py-1 px-1 font-sans"
+          className="max-h-44 min-h-16 resize-none rounded-none border-0 bg-transparent px-2 py-1.5 text-sm leading-7 shadow-none focus-visible:border-transparent focus-visible:ring-0"
         />
-
-        {/* Toolbar & Send Button */}
-        <div className="flex items-center justify-between pt-1 border-t border-white/6">
-          {/* Left Toolbar: Attach / Open Documents */}
-          <div className="flex items-center gap-1 text-zinc-400">
-            <button
-              type="button"
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Attach or manage documents"
               onClick={onOpenDocuments}
-              className="p-2 rounded-lg hover:bg-[#161f30] hover:text-white transition-colors cursor-pointer"
-              title="Knowledge Base Documents"
             >
-              <Paperclip className="w-4 h-4" />
-            </button>
+              <Paperclip className="size-4" />
+            </Button>
+            <span className="h-4 w-px bg-border" />
+            <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              {hasDocuments ? (
+                <BookOpen className="size-3 text-primary" />
+              ) : (
+                <Sparkles className="size-3 text-primary" />
+              )}
+              {hasDocuments ? "Your knowledge connected" : "Auto routing"}
+            </span>
           </div>
-
-          {/* Right: Send Button */}
-          <Button
-            type="button"
-            onClick={handleSendClick}
-            disabled={!canSend}
-            suppressHydrationWarning
-            className={`h-9 px-4 rounded-xl font-medium text-xs flex items-center gap-2 transition-all duration-200 ${
-              canSend
-                ? "bg-[#6d5dfc] hover:bg-[#7f70ff] text-white shadow-md shadow-[#6d5dfc]/25 cursor-pointer active:scale-[0.98]"
-                : "bg-[#161f30] text-zinc-500 border border-white/6 cursor-not-allowed opacity-60"
-            }`}
-          >
-            {isLoading ? (
-              <div className="spinner w-3.5 h-3.5 border-t-white" />
-            ) : (
-              <>
-                <span>Send</span>
-                <Send className="w-3.5 h-3.5" />
-              </>
-            )}
-          </Button>
+          <div className="flex items-center gap-3">
+            <span className="hidden text-[10px] text-muted-foreground/60 sm:block">
+              Shift + Enter for a new line
+            </span>
+            <Button
+              size="icon"
+              disabled={!value.trim() || isLoading}
+              aria-label={isLoading ? "Generating answer" : "Send message"}
+              onClick={send}
+              className="size-9 rounded-xl"
+            >
+              {isLoading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <ArrowUp className="size-4" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
-
-      <p className="mt-2 text-[11px] text-zinc-400 text-center font-normal tracking-wide select-none">
-        Cortex can make mistakes. Check important info.
+      <p className="mt-3 text-center text-[10px] text-muted-foreground/65">
+        A little perspective, powered by AI. Verify important information.
       </p>
     </div>
   );

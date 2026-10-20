@@ -9,19 +9,18 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[#6d5dfc] text-white hover:bg-[#7f70ff] shadow-sm active:scale-[0.98]",
+          "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
         destructive:
-          "bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25 hover:text-red-300",
+          "border border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/20",
         outline:
-          "border border-white/10 bg-transparent hover:bg-white/5 hover:text-white text-zinc-300",
+          "border border-input bg-transparent text-foreground hover:bg-accent",
         secondary:
-          "bg-[#161f30] text-zinc-200 hover:bg-[#1f2b42] border border-white/8",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost:
-          "text-zinc-400 hover:text-white hover:bg-white/5",
-        link:
-          "text-[#6d5dfc] underline-offset-4 hover:underline",
+          "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
         accent:
-          "bg-gradient-to-r from-[#6d5dfc] to-[#8b5cf6] text-white hover:brightness-110 shadow-lg shadow-[#6d5dfc]/25 active:scale-[0.98]",
+          "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
       },
       size: {
         default: "h-9 px-4 py-2",
@@ -35,17 +34,21 @@ const buttonVariants = cva(
       variant: "default",
       size: "default",
     },
-  }
+  },
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, type = "button", ...props }, ref) => {
+  (
+    { className, variant, size, asChild = false, type = "button", ...props },
+    ref,
+  ) => {
     const Comp = asChild ? Slot : "button";
     return (
       <Comp
@@ -55,7 +58,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       />
     );
-  }
+  },
 );
 Button.displayName = "Button";
 

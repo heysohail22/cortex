@@ -5,7 +5,10 @@ import { Sidebar } from "@/components/sidebar/Sidebar";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { MessageList } from "@/components/chat/MessageList";
 import { ChatComposer } from "@/components/chat/ChatComposer";
-import { DocumentsDrawer } from "@/components/documents/DocumentsDrawer";
+import {
+  DocumentsDrawer,
+  DocumentLibrary,
+} from "@/components/documents/DocumentsDrawer";
 import { MessageData } from "@/components/chat/AssistantMessage";
 import { ConversationData } from "@/components/sidebar/ConversationItem";
 import { DocumentInfo } from "@/components/documents/DocumentPreview";
@@ -28,14 +31,23 @@ interface DocMeta {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 function generateSafeId(): string {
-  if (typeof window !== "undefined" && window.crypto && typeof window.crypto.randomUUID === "function") {
+  if (
+    typeof window !== "undefined" &&
+    window.crypto &&
+    typeof window.crypto.randomUUID === "function"
+  ) {
     try {
       return window.crypto.randomUUID();
     } catch {
       // fallback
     }
   }
-  return "id-" + Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 9);
+  return (
+    "id-" +
+    Date.now().toString(36) +
+    "-" +
+    Math.random().toString(36).substring(2, 9)
+  );
 }
 
 function getOrCreateUserId(): string {
@@ -99,7 +111,7 @@ function loadSavedSessions(): ChatSession[] {
             typeof s === "object" &&
             typeof s.id === "string" &&
             !s.id.startsWith("demo-rag-") &&
-            s.id !== "demo-rag-1"
+            s.id !== "demo-rag-1",
         );
       }
     }
@@ -132,8 +144,15 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [documents, setDocuments] = useState<DocumentInfo[]>([]);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    queueMicrotask(() =>
+      setSidebarOpen(window.matchMedia("(min-width: 768px)").matches),
+    );
+  }, []);
   const [documentsDrawerOpen, setDocumentsDrawerOpen] = useState(false);
+  const [activeView, setActiveView] = useState<"chat" | "library">("chat");
 
   // Initialize persistent state after hydration using microtask to avoid cascading renders
   useEffect(() => {
@@ -163,18 +182,21 @@ export default function Home() {
       .then((data) => {
         if (data && Array.isArray(data.documents)) {
           const metaCache = getDocMetaCache(userId);
-          const backendDocs: DocumentInfo[] = data.documents.map((name: string) => {
-            const cached = metaCache[name];
-            const itemFromBackend = data.items?.find(
-              (it: { filename: string; chunks: number }) => it.filename === name
-            );
-            return {
-              filename: name,
-              chunks: itemFromBackend?.chunks || cached?.chunks || 0,
-              sizeMb: cached?.sizeMb || "Uploaded",
-              uploadDate: cached?.uploadDate || "Uploaded",
-            };
-          });
+          const backendDocs: DocumentInfo[] = data.documents.map(
+            (name: string) => {
+              const cached = metaCache[name];
+              const itemFromBackend = data.items?.find(
+                (it: { filename: string; chunks: number }) =>
+                  it.filename === name,
+              );
+              return {
+                filename: name,
+                chunks: itemFromBackend?.chunks || cached?.chunks || 0,
+                sizeMb: cached?.sizeMb || "Uploaded",
+                uploadDate: cached?.uploadDate || "Uploaded",
+              };
+            },
+          );
           setDocuments(backendDocs);
         } else {
           setDocuments([]);
@@ -196,10 +218,17 @@ export default function Home() {
               (bs: {
                 id: string;
                 title: string;
-                messages: Array<{ id: string; role: string; content: string; timestamp?: string }>;
+                messages: Array<{
+                  id: string;
+                  role: string;
+                  content: string;
+                  timestamp?: string;
+                }>;
                 created_at: string;
               }) => {
-                const parsedTime = bs.created_at ? new Date(bs.created_at).getTime() : Date.now();
+                const parsedTime = bs.created_at
+                  ? new Date(bs.created_at).getTime()
+                  : Date.now();
                 return {
                   id: bs.id,
                   title: bs.title || "Chat",
@@ -208,12 +237,15 @@ export default function Home() {
                     role: m.role as "user" | "assistant",
                     content: m.content || "",
                     timestamp: m.timestamp
-                      ? new Date(m.timestamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+                      ? new Date(m.timestamp).toLocaleTimeString([], {
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })
                       : undefined,
                   })),
                   createdAt: isNaN(parsedTime) ? Date.now() : parsedTime,
                 };
-              }
+              },
             );
 
             const merged = [...prev];
@@ -221,7 +253,10 @@ export default function Home() {
               const idx = merged.findIndex((s) => s.id === bs.id);
               if (idx === -1) {
                 merged.push(bs);
-              } else if (merged[idx].messages.length === 0 && bs.messages.length > 0) {
+              } else if (
+                merged[idx].messages.length === 0 &&
+                bs.messages.length > 0
+              ) {
                 merged[idx] = {
                   ...merged[idx],
                   title: bs.title,
@@ -248,14 +283,15 @@ export default function Home() {
   // Active session and messages
   const activeSession = useMemo(
     () => sessions.find((s) => s.id === activeChatId),
-    [sessions, activeChatId]
+    [sessions, activeChatId],
   );
   const messages = useMemo(
     () => (activeSession ? activeSession.messages : []),
-    [activeSession]
+    [activeSession],
   );
 
   const createNewChat = useCallback(() => {
+    setActiveView("chat");
     const active = sessions.find((s) => s.id === activeChatIdRef.current);
     if (active && active.messages.length === 0) {
       return;
@@ -295,9 +331,12 @@ export default function Home() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/api/sessions/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `${API_URL}/api/sessions/${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+        },
+      );
       if (res.ok) {
         toast.success("Chat deleted");
       } else {
@@ -310,7 +349,9 @@ export default function Home() {
 
   const renameChat = useCallback((id: string, newTitle: string) => {
     setSessions((prev) => {
-      const updated = prev.map((s) => (s.id === id ? { ...s, title: newTitle } : s));
+      const updated = prev.map((s) =>
+        s.id === id ? { ...s, title: newTitle } : s,
+      );
       saveSessionsToStorage(updated);
       return updated;
     });
@@ -319,10 +360,15 @@ export default function Home() {
 
   const handleSend = useCallback(
     async (customInput?: string) => {
-      const question = (typeof customInput === "string" ? customInput : input).trim();
+      const question = (
+        typeof customInput === "string" ? customInput : input
+      ).trim();
       if (!question || isLoading) return;
 
-      const currentTime = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      const currentTime = new Date().toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      });
 
       const userMsg: MessageData = {
         id: generateSafeId(),
@@ -340,7 +386,8 @@ export default function Home() {
       };
 
       let targetSessionId = activeChatIdRef.current;
-      const titleText = question.length > 32 ? question.slice(0, 32) + "..." : question;
+      const titleText =
+        question.length > 32 ? question.slice(0, 32) + "..." : question;
 
       if (!targetSessionId) {
         targetSessionId = generateSafeId();
@@ -411,11 +458,7 @@ export default function Home() {
           suggest_web_search: data.suggest_web_search || false,
           question: question,
           timestamp: currentTime,
-          chunksCount: Array.isArray(data.chunks)
-            ? data.chunks.length
-            : data.source === "rag"
-            ? 5
-            : 0,
+          chunksCount: Array.isArray(data.chunks) ? data.chunks.length : 0,
           chunks: data.chunks || [],
           webResults: data.web_results || [],
           evaluationResult: data.evaluation_result,
@@ -432,7 +475,7 @@ export default function Home() {
           if (activeIdx === -1) return prev;
           const session = prev[activeIdx];
           const updatedMsgs = session.messages.map((m) =>
-            m.id === loadingMsg.id ? assistantMsg : m
+            m.id === loadingMsg.id ? assistantMsg : m,
           );
           const updated = [...prev];
           updated[activeIdx] = { ...session, messages: updatedMsgs };
@@ -449,12 +492,10 @@ export default function Home() {
               ? {
                   ...m,
                   isLoading: false,
-                  content:
-                    `⚠️ Failed to connect to the backend service at ${API_URL}. Please check that the FastAPI service is running.`,
+                  content: `⚠️ Failed to connect to the backend service at ${API_URL}. Please check that the FastAPI service is running.`,
                   source: "llm" as const,
-
                 }
-              : m
+              : m,
           );
           const updated = [...prev];
           updated[activeIdx] = { ...session, messages: updatedMsgs };
@@ -465,14 +506,14 @@ export default function Home() {
         setIsLoading(false);
       }
     },
-    [input, isLoading, userId]
+    [input, isLoading, userId],
   );
 
   const handleWebSearchFallback = useCallback(
     (question: string) => {
       handleSend(`Search the web for ${question}`);
     },
-    [handleSend]
+    [handleSend],
   );
 
   const handleDocumentUploaded = useCallback(
@@ -485,7 +526,7 @@ export default function Home() {
       const newDoc: DocumentInfo = {
         filename,
         chunks: chunks || 0,
-        sizeMb: sizeMb || "1.0 MB",
+        sizeMb: sizeMb || "Size unavailable",
         uploadDate,
       };
       setDocuments((prev) => {
@@ -494,7 +535,7 @@ export default function Home() {
       });
       saveDocMeta(userId, filename, { chunks, sizeMb, uploadDate });
     },
-    [userId]
+    [userId],
   );
 
   const handleDocumentDeleted = useCallback(
@@ -502,15 +543,14 @@ export default function Home() {
       setDocuments((prev) => prev.filter((d) => d.filename !== filename));
       removeDocMeta(userId, filename);
     },
-    [userId]
+    [userId],
   );
 
-  const handleUseInChat = useCallback(
-    (filename: string) => {
-      setInput(`Summarize and explain the key findings in ${filename}`);
-    },
-    []
-  );
+  const handleUseInChat = useCallback((filename: string) => {
+    setInput(`Summarize and explain the key findings in ${filename}`);
+    setActiveView("chat");
+    setDocumentsDrawerOpen(false);
+  }, []);
 
   // Map sessions to ConversationData
   const conversations: ConversationData[] = useMemo(
@@ -521,48 +561,68 @@ export default function Home() {
         createdAt: s.createdAt,
         timestampStr: s.timestampStr,
       })),
-    [sessions]
+    [sessions],
   );
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#080b11] text-zinc-100 antialiased">
+    <div className="flex h-dvh w-full overflow-hidden bg-background text-foreground antialiased">
       {/* ── Left Sidebar ──────────────────────────────────────────────────────── */}
       <Sidebar
         conversations={conversations}
         activeChatId={activeChatId}
         userId={userId}
-        onSelectChat={setActiveChatId}
+        onSelectChat={(id) => {
+          setActiveChatId(id);
+          setActiveView("chat");
+        }}
         onNewChat={createNewChat}
         onDeleteChat={deleteChat}
         onRenameChat={renameChat}
         isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onOpenLibrary={() => setActiveView("library")}
+        libraryOpen={activeView === "library"}
+        docCount={documents.length}
       />
 
       {/* ── Main Chat Area ───────────────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
-        <ChatHeader
-          title={activeSession?.title || "New Chat"}
-          docCount={documents.length}
-          onOpenDocuments={() => setDocumentsDrawerOpen(true)}
-          onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
-          sidebarOpen={sidebarOpen}
-        />
+        {activeView === "library" ? (
+          <DocumentLibrary
+            documents={documents}
+            sessionId={userId}
+            onDocumentUploaded={handleDocumentUploaded}
+            onDocumentDeleted={handleDocumentDeleted}
+            onUseInChat={handleUseInChat}
+            onToggleSidebar={() => setSidebarOpen((previous) => !previous)}
+          />
+        ) : (
+          <>
+            <ChatHeader
+              title={activeSession?.title || "New Chat"}
+              docCount={documents.length}
+              onOpenDocuments={() => setDocumentsDrawerOpen(true)}
+              onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
+              sidebarOpen={sidebarOpen}
+            />
 
-        <MessageList
-          messages={messages}
-          onSelectPrompt={(prompt) => handleSend(prompt)}
-          onOpenDocuments={() => setDocumentsDrawerOpen(true)}
-          onWebSearchFallback={handleWebSearchFallback}
-        />
+            <MessageList
+              messages={messages}
+              onSelectPrompt={(prompt) => handleSend(prompt)}
+              onOpenDocuments={() => setDocumentsDrawerOpen(true)}
+              onWebSearchFallback={handleWebSearchFallback}
+            />
 
-        <ChatComposer
-          value={input}
-          onChange={setInput}
-          onSend={handleSend}
-          isLoading={isLoading}
-          onOpenDocuments={() => setDocumentsDrawerOpen(true)}
-          hasDocuments={documents.length > 0}
-        />
+            <ChatComposer
+              value={input}
+              onChange={setInput}
+              onSend={handleSend}
+              isLoading={isLoading}
+              onOpenDocuments={() => setDocumentsDrawerOpen(true)}
+              hasDocuments={documents.length > 0}
+            />
+          </>
+        )}
       </main>
 
       {/* ── Right Documents Drawer (Sheet) ───────────────────────────────────── */}
