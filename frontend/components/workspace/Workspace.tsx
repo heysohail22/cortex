@@ -435,7 +435,7 @@ export function Workspace({ children }: { children: ReactNode }) {
           onRenameChat={renameChat}
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
-          onOpenLibrary={() => setUploadOpen(true)}
+          onOpenLibrary={() => router.push("/library")}
           libraryOpen={pathname === "/library"}
           docCount={documents.length}
         />

@@ -62,7 +62,7 @@ export function Sidebar({
         </Button>
         <Button
           variant="ghost"
-          aria-haspopup="dialog"
+          aria-current={libraryOpen ? "page" : undefined}
           onClick={() => navigate(onOpenLibrary)}
           className={cn(
             "w-full justify-start gap-2.5 text-xs",
