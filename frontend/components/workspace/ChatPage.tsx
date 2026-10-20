@@ -27,6 +27,7 @@ export function ChatPage() {
     sidebarOpen,
     toggleSidebar,
     openDocuments,
+    openDocumentUpload,
     sendMessage,
     stopResponse,
     retryHistory,
@@ -36,6 +37,9 @@ export function ChatPage() {
       ? `${activeSession.title} — Cortex`
       : "New conversation — Cortex";
   }, [activeSession?.title, activeSession]);
+  const latestAnswer = activeSession?.messages.findLast(
+    (message) => message.role === "assistant" && !message.isLoading,
+  );
   const unavailable = Boolean(activeChatId && !activeSession);
   const restoring = !hydrated || (unavailable && historyStatus === "loading");
   return (
@@ -98,7 +102,7 @@ export function ChatPage() {
           <MessageList
             messages={activeSession?.messages || []}
             onSelectPrompt={(prompt) => void sendMessage(prompt)}
-            onOpenDocuments={openDocuments}
+            onOpenDocuments={openDocumentUpload}
             onWebSearchFallback={(question) =>
               void sendMessage(`Search the web for ${question}`)
             }
@@ -111,8 +115,9 @@ export function ChatPage() {
             isLoading={isLoading}
             onStop={stopResponse}
             disabled={!hydrated}
-            onOpenDocuments={openDocuments}
+            onOpenDocuments={openDocumentUpload}
             hasDocuments={documents.length > 0}
+            source={latestAnswer?.source}
           />
         </>
       )}

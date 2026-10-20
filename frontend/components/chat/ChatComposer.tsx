@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
-import { ArrowUp, Plus, BookOpen, Square, Sparkles } from "lucide-react";
+import {
+  ArrowUp,
+  Plus,
+  BookOpen,
+  Square,
+  Sparkles,
+  Globe2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -14,6 +21,7 @@ interface Props {
   onStop?: () => void;
   onOpenDocuments?: () => void;
   hasDocuments?: boolean;
+  source?: "rag" | "llm" | "web_search" | "hybrid" | "guardrail";
   disabled?: boolean;
 }
 
@@ -27,6 +35,7 @@ export function ChatComposer({
   onStop,
   onOpenDocuments,
   hasDocuments,
+  source,
   disabled,
 }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -34,6 +43,23 @@ export function ChatComposer({
   const multiline = value.includes("\n") || value.length > 80;
   const tooLong = value.length > MAX_LENGTH;
   const canSend = Boolean(value.trim()) && !tooLong && !disabled && !isLoading;
+  const documentSource =
+    !isLoading && (source === "rag" || source === "hybrid");
+  const webSource =
+    !isLoading && (source === "web_search" || source === "hybrid");
+  const assistantSource = !isLoading && (!source || source === "llm");
+  const sourceBorder = documentSource
+    ? "border-emerald-300/25 focus-within:border-emerald-300/55"
+    : webSource
+      ? "border-amber-300/25 focus-within:border-amber-300/55"
+      : assistantSource
+        ? "border-violet-300/25 focus-within:border-violet-300/55"
+        : "border-white/12 focus-within:border-primary/45";
+  const sendColor = documentSource
+    ? "bg-emerald-300 text-emerald-950 hover:bg-emerald-200"
+    : webSource
+      ? "bg-amber-300 text-amber-950 hover:bg-amber-200"
+      : "bg-violet-300 text-violet-950 hover:bg-violet-200";
   useEffect(() => {
     const textarea = ref.current;
     if (!textarea) return;
@@ -53,21 +79,78 @@ export function ChatComposer({
           send();
         }}
         className={cn(
-          "relative overflow-hidden rounded-[28px] border bg-[#1c1d21] p-2 shadow-[0_8px_40px_-16px_rgba(0,0,0,0.6)] transition-[border-color,box-shadow] duration-200 focus-within:border-primary/45 focus-within:shadow-[0_0_0_3px_rgba(196,177,240,0.04)]",
-          tooLong ? "border-destructive/60" : "border-white/12",
+          "relative overflow-hidden rounded-[28px] border bg-[#1c1d21] p-2 shadow-[0_8px_40px_-16px_rgba(0,0,0,0.6)] transition-[border-color,box-shadow] duration-200 focus-within:shadow-[0_0_0_3px_rgba(196,177,240,0.04)]",
+          tooLong
+            ? "border-destructive/60 focus-within:border-destructive/60"
+            : sourceBorder,
         )}
       >
-        {hasDocuments && (
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={onOpenDocuments}
-            className="mb-1 ml-3 mt-1 flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/[0.06] px-2.5 py-1 text-[10px] text-primary transition-colors hover:bg-primary/10"
+        <div className="mx-2 mb-2 mt-1 flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-2">
+          <div
+            role="group"
+            aria-label="Automatic answer source"
+            className="flex flex-wrap items-center gap-1.5"
           >
-            <BookOpen className="size-3" />
-            Your knowledge base
-          </button>
-        )}
+            {[
+              {
+                label: "Assistant",
+                key: "llm",
+                icon: Sparkles,
+                active: assistantSource,
+                activeColor:
+                  "border-violet-300/30 bg-violet-300/12 text-violet-200",
+                idleColor: "text-violet-300/50",
+              },
+              {
+                label: "Documents",
+                key: "rag",
+                icon: BookOpen,
+                active: documentSource,
+                activeColor:
+                  "border-emerald-300/30 bg-emerald-300/12 text-emerald-200",
+                idleColor: "text-emerald-300/50",
+              },
+              {
+                label: "Web search",
+                key: "web_search",
+                icon: Globe2,
+                active: webSource,
+                activeColor:
+                  "border-amber-300/30 bg-amber-300/12 text-amber-200",
+                idleColor: "text-amber-300/50",
+              },
+            ].map(
+              ({ label, key, icon: Icon, active, activeColor, idleColor }) => (
+                <span
+                  key={key}
+                  data-source={key}
+                  data-active={active}
+                  title={`${label}${active ? " · Current answer source" : ""}. Selected automatically by Cortex.`}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-medium transition-colors sm:px-2.5",
+                    active ? activeColor : `border-transparent ${idleColor}`,
+                  )}
+                >
+                  <Icon className="size-3" />
+                  {label}
+                  {active && (
+                    <span className="sr-only"> (current answer source)</span>
+                  )}
+                </span>
+              ),
+            )}
+          </div>
+          <span
+            className="hidden text-[9px] text-muted-foreground/60 sm:block"
+            title={
+              hasDocuments
+                ? "Your library is available. Cortex selects sources automatically."
+                : "Cortex selects the best source for each answer."
+            }
+          >
+            {isLoading ? "Choosing source…" : "Auto source"}
+          </span>
+        </div>
         <div className="flex items-end gap-1.5 sm:gap-2">
           <Button
             type="button"
@@ -124,7 +207,10 @@ export function ChatComposer({
               disabled={!canSend}
               aria-label="Send message"
               title="Send message"
-              className="mb-0.5 size-10 shrink-0 rounded-full bg-foreground text-background hover:bg-primary hover:text-primary-foreground disabled:bg-white/8 disabled:text-muted-foreground/50 disabled:opacity-100"
+              className={cn(
+                "mb-0.5 size-10 shrink-0 rounded-full disabled:bg-white/8 disabled:text-muted-foreground/50 disabled:opacity-100",
+                sendColor,
+              )}
             >
               <ArrowUp className="size-5" />
             </Button>

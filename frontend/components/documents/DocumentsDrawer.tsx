@@ -16,17 +16,10 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DocumentCard } from "./DocumentCard";
-import { DocumentUpload } from "./DocumentUpload";
+import { DocumentUploadDialog } from "./DocumentUploadDialog";
 import { DocumentPreview, DocumentInfo } from "./DocumentPreview";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { ManageDeletedDialog, DeletedDocInfo } from "./ManageDeletedDialog";
@@ -61,7 +54,6 @@ export function DocumentLibrary({
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("recent");
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<DocumentInfo | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -246,31 +238,13 @@ export function DocumentLibrary({
           </p>
         </div>
       </div>
-      <Dialog
+      <DocumentUploadDialog
         open={uploadOpen}
-        onOpenChange={(value) => {
-          if (!uploading) setUploadOpen(value);
-        }}
-      >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <span className="section-label">GROW YOUR LIBRARY</span>
-            <DialogTitle>Add a little context</DialogTitle>
-            <DialogDescription>
-              Upload a document to explore it with Cortex.
-            </DialogDescription>
-          </DialogHeader>
-          <DocumentUpload
-            sessionId={sessionId}
-            isUploading={uploading}
-            setIsUploading={setUploading}
-            onUploaded={(filename, chunks, size) => {
-              onDocumentUploaded(filename, chunks, size);
-              setUploadOpen(false);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
+        onOpenChange={setUploadOpen}
+        sessionId={sessionId}
+        onUploaded={onDocumentUploaded}
+        documentCount={documents.length}
+      />
       <DocumentPreview
         open={Boolean(preview)}
         document={preview}

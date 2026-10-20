@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/sidebar/Sidebar";
+import { DocumentUploadDialog } from "@/components/documents/DocumentUploadDialog";
 import { DocumentsDrawer } from "@/components/documents/DocumentsDrawer";
 import type { DocumentInfo } from "@/components/documents/DocumentPreview";
 import type { MessageData } from "@/components/chat/AssistantMessage";
@@ -43,6 +44,7 @@ interface WorkspaceValue {
   sidebarOpen: boolean;
   toggleSidebar: () => void;
   openDocuments: () => void;
+  openDocumentUpload: () => void;
   sendMessage: (text?: string) => Promise<void>;
   stopResponse: () => void;
   retryHistory: () => void;
@@ -95,6 +97,7 @@ export function Workspace({ children }: { children: ReactNode }) {
   const [documents, setDocuments] = useState<DocumentInfo[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [documentsOpen, setDocumentsOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [pendingIds, setPendingIds] = useState<string[]>([]);
   const requests = useRef(new Map<string, AbortController>());
   const deletedIds = useRef(new Set<string>());
@@ -409,6 +412,7 @@ export function Workspace({ children }: { children: ReactNode }) {
     sidebarOpen,
     toggleSidebar: () => setSidebarOpen((previous) => !previous),
     openDocuments: () => setDocumentsOpen(true),
+    openDocumentUpload: () => setUploadOpen(true),
     sendMessage,
     stopResponse: () => {
       if (activeChatId) requests.current.get(activeChatId)?.abort();
@@ -431,13 +435,21 @@ export function Workspace({ children }: { children: ReactNode }) {
           onRenameChat={renameChat}
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
-          onOpenLibrary={() => router.push("/library")}
+          onOpenLibrary={() => setUploadOpen(true)}
           libraryOpen={pathname === "/library"}
           docCount={documents.length}
         />
         <main className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
           {children}
         </main>
+        <DocumentUploadDialog
+          open={uploadOpen}
+          onOpenChange={setUploadOpen}
+          sessionId={userId}
+          onUploaded={onDocumentUploaded}
+          documentCount={documents.length}
+          onViewLibrary={() => router.push("/library")}
+        />
         <DocumentsDrawer
           open={documentsOpen}
           onOpenChange={setDocumentsOpen}
